@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
@@ -12,6 +12,5 @@
     "esm": "^3.2.25",
     "simple-git": "^2.37.0"
   },
-  "devDependencies": {
-  }
+  "devDependencies": {}
 }
