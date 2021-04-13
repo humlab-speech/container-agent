@@ -2,6 +2,8 @@ const ApiResponse = require('./ApiResponse.class.js');
 const simpleGit = require('simple-git')
 require('process');
 
+const version = '1.0.0';
+
 process.env.GIT_SSL_NO_VERIFY=true; //This is only needed for local testing
 
 /**
@@ -127,6 +129,15 @@ if(typeof process.argv[2] == "undefined") {
 }
 else {
 
+    let cmd = process.argv[2];
+    let args = process.argv;
+    args.splice(0, 3);
+
+    if(cmd == "version") {
+        console.log(version);
+        return;
+    }
+
     let repoPath = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : null;
     let gitUserName = process.env.GIT_USER_NAME ? process.env.GIT_USER_NAME : null;
     let gitUserEmail = process.env.GIT_USER_EMAIL ? process.env.GIT_USER_EMAIL : null;
@@ -151,9 +162,7 @@ else {
 
     const repo = new GitRepository(repoPath, gitUserName, gitUserEmail);
 
-    let cmd = process.argv[2];
-    let args = process.argv;
-    args.splice(0, 3);
+    
 
     switch(cmd) {
         case "clone":
