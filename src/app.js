@@ -60,7 +60,7 @@ class GitRepository {
         }).catch(error => this.handleUnknownError(error));
     }
 
-    async add(paths = ["."]) {
+    async add(paths = ['.']) {
         return this.configGit().add(paths).then(result => {
             return new ApiResponse(200, 'ok');
         }).catch(error => this.handleUnknownError(error));
@@ -68,12 +68,23 @@ class GitRepository {
     
     async commit(msg = 'system-auto-commit') {
         return this.configGit().commit(msg).then(result => {
+            if(result.summary.changes == 0 && result.summary.insertions == 0 && result.summary.deletions == 0) {
+                return new ApiResponse(400, 'Nothing to commit');
+            }
             return new ApiResponse(200, 'ok');
-        }).catch(error => this.handleUnknownError(error));
+        }).catch(error => {
+            let errorMsg = error.toString();
+            if(errorMsg.indexOf('nothing to commit') != -1) {
+                return new ApiResponse(400, 'Nothing to commit');
+            }
+            else {
+                this.handleUnknownError(error);
+            }
+        });
     }
     
     async push(branch = 'master') {
-        if(typeof process.env.GIT_BRANCH != "undefined" && branch == 'master') {
+        if(typeof process.env.GIT_BRANCH != 'undefined' && branch == 'master') {
             branch = process.env.GIT_BRANCH;
         }
 
@@ -82,7 +93,7 @@ class GitRepository {
         }).catch(async error => {
             let errorMsg = error.toString();
 
-            if(errorMsg.indexOf("failed to push some refs to") != -1) {
+            if(errorMsg.indexOf('failed to push some refs to') != -1) {
                 //Based on this error message we assume the problem to be a conflicting change has been made, we 'solve' this by create another branch
 
                 await this.resetToHead();
@@ -91,16 +102,16 @@ class GitRepository {
                 await this.commit();
                 await this.push(branch.body);
 
-                return new ApiResponse(200, "Push conflicted with upstream changes, pushed to a separate branch");
+                return new ApiResponse(200, 'Push conflicted with upstream changes, pushed to a separate branch');
             }
         });
     }
 
     generateSystemBranchName() {
         let branchName = new Date().toISOString();
-        branchName = branchName.replace(/:/g, "");
+        branchName = branchName.replace(/:/g, '');
         branchName = branchName.substr(0, 17)
-        branchName = "system-branch-" + branchName;
+        branchName = 'system-branch-' + branchName;
         return branchName;
     }
 
@@ -124,7 +135,7 @@ class GitRepository {
     }
 }
 
-if(typeof process.argv[2] == "undefined") {
+if(typeof process.argv[2] == 'undefined') {
     return console.log('No command supplied');
 }
 else {
@@ -133,7 +144,7 @@ else {
     let args = process.argv;
     args.splice(0, 3);
 
-    if(cmd == "version") {
+    if(cmd == 'version') {
         console.log(version);
         return;
     }
@@ -161,34 +172,42 @@ else {
     }
 
     const repo = new GitRepository(repoPath, gitUserName, gitUserEmail);
-
     
-
     switch(cmd) {
-        case "clone":
+        case 'clone':
             repo.clone().then(ar => console.log(ar.toJSON()));
             break;
-        case "add":
+        case 'add':
             repo.add().then(ar => console.log(ar.toJSON()));
             break;
-        case "commit":
+        case 'commit':
             repo.commit().then(ar => console.log(ar.toJSON()));
             break;
-        case "reset":
+        case 'reset':
             repo.resetToHead().then(ar => console.log(ar.toJSON()));
             break;
-        case "push":
+        case 'push':
             repo.push().then(ar => console.log(ar.toJSON()));
             break;
-        case "status":
+        case 'status':
             repo.status().then(ar => console.log(ar.toJSON()));
             break;
-        case "checkout":
+        case 'checkout':
             repo.checkoutBranch().then(ar => console.log(ar.toJSON()));
             break;
-        case "save": //Save is just a shorthand for add+commit+push
-            repo.add().then(() => {
-                repo.commit().then(() => {
+        case 'save': //Save is just a shorthand for add+commit+push
+            repo.add().then((ar) => {
+                if(ar.code != 200) {
+                    //If last operation caused an error, abort and return 
+                    console.log(ar.toJSON());
+                    return;
+                }
+                repo.commit().then((ar) => {
+                    if(ar.code != 200) {
+                        //If last operation caused an error, abort and return 
+                        console.log(ar.toJSON());
+                        return;
+                    }
                     repo.push().then(ar => console.log(ar.toJSON()));
                 });
             });

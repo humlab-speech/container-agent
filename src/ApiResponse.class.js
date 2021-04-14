@@ -5,12 +5,10 @@ class ApiResponse {
     }
 
     toJSON() {
-        let msg = this.body;
-        if(typeof msg !== 'object') {
-            msg = { msg: this.body };
-        }
-        
-        return JSON.stringify(msg);
+        return JSON.stringify({
+            code: this.code,
+            msg: this.body
+        });
     }
 }
 
