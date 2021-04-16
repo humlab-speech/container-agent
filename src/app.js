@@ -54,6 +54,20 @@ class GitRepository {
         });
     }
 
+    async pull() {
+        return this.configGit().pull().then(result => {
+            if(result.summary.changes == 0 && result.summary.deletions == 0 && result.summary.insertions == 0) {
+                return new ApiResponse(200, 'No changes to pull');
+            }
+            return new ApiResponse(200, 'Pulled changes');
+        }).catch(error => {
+            let errorMsg = error.toString();
+            if(errorMsg.indexOf('local changes to the following files would be overwritten') != -1) {
+                return new ApiResponse(500, 'Conflicting changes');
+            }
+        });
+    }
+
     async status() {
         return this.git.status({ baseDir: this.repoPath }).then(t => {
             return new ApiResponse(200, t);
@@ -69,13 +83,13 @@ class GitRepository {
     async commit(msg = 'system-auto-commit') {
         return this.configGit().commit(msg).then(result => {
             if(result.summary.changes == 0 && result.summary.insertions == 0 && result.summary.deletions == 0) {
-                return new ApiResponse(400, 'Nothing to commit');
+                return new ApiResponse(400, 'No changes to save.');
             }
             return new ApiResponse(200, 'ok');
         }).catch(error => {
             let errorMsg = error.toString();
             if(errorMsg.indexOf('nothing to commit') != -1) {
-                return new ApiResponse(400, 'Nothing to commit');
+                return new ApiResponse(400, 'No changes to save.');
             }
             else {
                 this.handleUnknownError(error);
@@ -89,7 +103,7 @@ class GitRepository {
         }
 
         return this.configGit().push('origin', branch).then(result => {
-            return new ApiResponse(200, 'ok');
+            return new ApiResponse(200, 'Saved!');
         }).catch(async error => {
             let errorMsg = error.toString();
 
@@ -102,7 +116,7 @@ class GitRepository {
                 await this.commit();
                 await this.push(branch.body);
 
-                return new ApiResponse(200, 'Push conflicted with upstream changes, pushed to a separate branch');
+                return new ApiResponse(200, 'Your project was saved to a separate branch since it conflicted with other changes. You will need to merge these branches manually in GitLab.');
             }
         });
     }
@@ -176,6 +190,9 @@ else {
     switch(cmd) {
         case 'clone':
             repo.clone().then(ar => console.log(ar.toJSON()));
+            break;
+        case "pull":
+            repo.pull().then(ar => console.log(ar.toJSON()));
             break;
         case 'add':
             repo.add().then(ar => console.log(ar.toJSON()));
