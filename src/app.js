@@ -212,20 +212,28 @@ else {
         case 'checkout':
             repo.checkoutBranch().then(ar => console.log(ar.toJSON()));
             break;
-        case 'save': //Save is just a shorthand for add+commit+push
-            repo.add().then((ar) => {
+        case 'save': //Save is just a shorthand for pull+add+commit+push
+            //Try to pull in any changes
+            repo.pull().then((ar) => {
                 if(ar.code != 200) {
                     //If last operation caused an error, abort and return 
                     console.log(ar.toJSON());
                     return;
                 }
-                repo.commit().then((ar) => {
+                repo.add().then((ar) => {
                     if(ar.code != 200) {
                         //If last operation caused an error, abort and return 
                         console.log(ar.toJSON());
                         return;
                     }
-                    repo.push().then(ar => console.log(ar.toJSON()));
+                    repo.commit().then((ar) => {
+                        if(ar.code != 200) {
+                            //If last operation caused an error, abort and return 
+                            console.log(ar.toJSON());
+                            return;
+                        }
+                        repo.push().then(ar => console.log(ar.toJSON()));
+                    });
                 });
             });
             break;
