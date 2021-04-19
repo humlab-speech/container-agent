@@ -50,7 +50,7 @@ class GitRepository {
                 return new ApiResponse(400, 'GitLab authentication failed');
             }
 
-            return new ApiResponse(500, 'Unknown error');
+            return new ApiResponse(500, errorMsg);
         });
     }
 
