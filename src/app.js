@@ -62,9 +62,14 @@ class GitRepository {
             return new ApiResponse(200, 'Pulled changes');
         }).catch(error => {
             let errorMsg = error.toString();
-            if(errorMsg.indexOf('local changes to the following files would be overwritten') != -1) {
+            if(errorMsg.indexOf("local changes to the following files would be overwritten") != -1) {
                 return new ApiResponse(500, 'Conflicting changes');
             }
+            if(errorMsg.indexOf("configuration specifies to merge with the ref 'refs/heads/master'") != -1) {
+                return new ApiResponse(200, 'Empty repository');
+            }
+
+            return new ApiResponse(500, errorMsg);
         });
     }
 
