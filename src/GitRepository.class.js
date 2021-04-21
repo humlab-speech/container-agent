@@ -1,4 +1,5 @@
 const simpleGit = require('simple-git')
+const ApiResponse = require('./ApiResponse.class.js');
 
 class GitRepository {
     constructor(repoPath, gitUserName, gitUserEmail) {

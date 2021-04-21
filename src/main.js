@@ -3,7 +3,7 @@ const copy = require('recursive-copy');
 const ApiResponse = require('./ApiResponse.class.js');
 const GitRepository = require('./GitRepository.class.js');
 
-const version = '1.0.0';
+const version = '1.1.0';
 
 process.env.GIT_SSL_NO_VERIFY=true; //This is only needed for local testing
 
