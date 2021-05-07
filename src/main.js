@@ -2,8 +2,9 @@ require('process');
 const copy = require('recursive-copy');
 const ApiResponse = require('./ApiResponse.class.js');
 const GitRepository = require('./GitRepository.class.js');
+const EmuDbManager = require('./EmuDbManager.class.js');
 
-const version = '1.1.0';
+const version = '1.2.0';
 
 process.env.GIT_SSL_NO_VERIFY=true; //This is only needed for local testing
 
@@ -20,6 +21,17 @@ process.env.GIT_SSL_NO_VERIFY=true; //This is only needed for local testing
 
 async function copyDocs() {
     return copy('/home/uploads/docs', '/home/project-setup/Documents')
+    .then(function(results) {
+        return new ApiResponse(200, 'Copied ' + results.length + ' files');
+    })
+    .catch(function(error) {
+        return new ApiResponse(400, 'Copy failed' + error);
+    });
+}
+
+async function copyProjectTemplateDirectory() {
+    //cp -R /project-template-structure/* ${PROJECT_PATH}
+    return copy('/project-template-structure', process.env.PROJECT_PATH)
     .then(function(results) {
         return new ApiResponse(200, 'Copied ' + results.length + ' files');
     })
@@ -69,35 +81,56 @@ else {
         repo = new GitRepository(repoPath, gitUserName, gitUserEmail);
     }
 
-    
+    let emudbMan = null;
+    if(cmd.split("-")[0] == "emudb") {
+        emudbMan = new EmuDbManager();
+    }
     
     switch(cmd) {
         case "copy-docs":
-            copyDocs().then(ar => console.log(ar.toJSON()));
+            copyDocs().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
+        case "copy-project-template-directory":
+            copyProjectTemplateDirectory().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
+        case "emudb-create":
+            emudbMan.create().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
+        case "emudb-import-wavs":
+            emudbMan.importWavs().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
+        case "emudb-create-bundlelist":
+            emudbMan.createBundleList().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
+        case "emudb-create-annotlevels":
+            emudbMan.createAnnotationLevels().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
+        case "emudb-create-annotlevellinks":
+            emudbMan.createAnnotationLevelLinks().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case 'clone':
-            repo.clone().then(ar => console.log(ar.toJSON()));
+            repo.clone().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case "pull":
-            repo.pull().then(ar => console.log(ar.toJSON()));
+            repo.pull().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case 'add':
-            repo.add().then(ar => console.log(ar.toJSON()));
+            repo.add().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case 'commit':
-            repo.commit().then(ar => console.log(ar.toJSON()));
+            repo.commit().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case 'reset':
-            repo.resetToHead().then(ar => console.log(ar.toJSON()));
+            repo.resetToHead().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case 'push':
-            repo.push().then(ar => console.log(ar.toJSON()));
+            repo.push().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case 'status':
-            repo.status().then(ar => console.log(ar.toJSON()));
+            repo.status().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case 'checkout':
-            repo.checkoutBranch().then(ar => console.log(ar.toJSON()));
+            repo.checkoutBranch().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case 'save': //Save is just a shorthand for pull+add+commit+push
             //Try to pull in any changes
