@@ -19,7 +19,7 @@ process.env.GIT_SSL_NO_VERIFY=true; //This is only needed for local testing
  * 
 **/
 
-async function copyDocs() {
+function copyDocs() {
     return copy('/home/uploads/docs', '/home/project-setup/Documents')
     .then(function(results) {
         return new ApiResponse(200, 'Copied ' + results.length + ' files');
@@ -29,9 +29,26 @@ async function copyDocs() {
     });
 }
 
+async function fullRecursiveCopy(src, dest) {
+    let options = {
+        dot: true //Also copy hidden files
+    };
+
+    return copy(src, dest, options)
+    .then(function(results) {
+        return new ApiResponse(200, 'Copied ' + results.length + ' files');
+    })
+    .catch(function(error) {
+        return new ApiResponse(400, 'Copy failed' + error);
+    });
+}
+
 async function copyProjectTemplateDirectory() {
-    //cp -R /project-template-structure/* ${PROJECT_PATH}
-    return copy('/project-template-structure', process.env.PROJECT_PATH)
+    let options = {
+        dot: true //Also copy hidden files
+    };
+
+    return copy('/project-template-structure', process.env.PROJECT_PATH, options)
     .then(function(results) {
         return new ApiResponse(200, 'Copied ' + results.length + ' files');
     })
@@ -92,6 +109,9 @@ else {
             break;
         case "copy-project-template-directory":
             copyProjectTemplateDirectory().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
+        case "full-recursive-copy":
+            fullRecursiveCopy(args[0], args[1]).then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
             break;
         case "emudb-create":
             emudbMan.create().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
