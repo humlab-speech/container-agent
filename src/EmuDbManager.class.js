@@ -81,7 +81,7 @@ class EmuDbManager {
 
     async getSessions(projectPath = "./") {
         return new Promise((resolve, reject) => {
-            exec("PROJECT_PATH="+projectPath+" R -s -f ./scripts/getSessions.R", (error, stdout, stderr) => {
+            exec("PROJECT_PATH="+projectPath+" R -s -f "+__dirname+"/scripts/getSessions.R", (error, stdout, stderr) => {
                 stdout = stdout.trim();
                 let outputLines = stdout.split("\n");
                 let jsonData = outputLines.slice(-1)[0]; //Last row is where we expect the relevant output to be
@@ -93,7 +93,7 @@ class EmuDbManager {
 
     async getBundles(projectPath = "./") {
         return new Promise((resolve, reject) => {
-            exec("PROJECT_PATH="+projectPath+" R -s -f ./scripts/getBundles.R", (error, stdout, stderr) => {
+            exec("PROJECT_PATH="+projectPath+" R -s -f "+__dirname+"/scripts/getBundles.R", (error, stdout, stderr) => {
                 stdout = stdout.trim();
                 let outputLines = stdout.split("\n");
                 let jsonData = outputLines.slice(-1)[0]; //Last row is where we expect the relevant output to be
@@ -120,7 +120,7 @@ class EmuDbManager {
     //This might be redundant since this information seems to exist in the *_DBconfig.json
     async getAnnotLevels(projectPath = "./") {
         return new Promise((resolve, reject) => {
-            exec("PROJECT_PATH="+projectPath+" R -s -f ./scripts/getAnnotLevels.R", (error, stdout, stderr) => {
+            exec("PROJECT_PATH="+projectPath+" R -s -f "+__dirname+"/scripts/getAnnotLevels.R", (error, stdout, stderr) => {
                 stdout = stdout.trim();
                 let outputLines = stdout.split("\n");
                 let jsonData = outputLines.slice(-1)[0]; //Last row is where we expect the relevant output to be
