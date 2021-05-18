@@ -128,6 +128,9 @@ else {
         case "emudb-create-annotlevellinks":
             emudbMan.createAnnotationLevelLinks().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
+        case "emudb-scan":
+            emudbMan.scan().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
+            break;
         case 'clone':
             repo.clone().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
