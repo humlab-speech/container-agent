@@ -19,6 +19,7 @@ process.env.GIT_SSL_NO_VERIFY=true; //This is only needed for local testing
  * 
 **/
 
+
 function copyDocs() {
     return copy('/home/uploads/docs', '/home/project-setup/Documents')
     .then(function(results) {

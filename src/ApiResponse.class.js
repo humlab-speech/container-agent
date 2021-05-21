@@ -7,7 +7,7 @@ class ApiResponse {
     toJSON() {
         return JSON.stringify({
             code: this.code,
-            msg: this.body
+            body: this.body
         });
     }
 }
