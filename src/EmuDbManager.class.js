@@ -6,11 +6,12 @@ class EmuDbManager {
     constructor(app) {
         this.app = app;
         this.emuDbPrefix = "VISP";
+        this.scriptPath = "/container-agent/scripts";
     }
 
     async create() {
         return new Promise((resolve, reject) => {
-            exec("/usr/local/bin/R -s -f "+__dirname+"/scripts/createEmuDb.R", (error, stdout, stderr) => {
+            exec("/usr/local/bin/R -s -f "+this.scriptPath+"/createEmuDb.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -18,7 +19,7 @@ class EmuDbManager {
 
     async importWavs() {
         return new Promise((resolve, reject) => {
-            exec("/usr/local/bin/R -s -f "+__dirname+"/scripts/importWavFiles.R", (error, stdout, stderr) => {
+            exec("/usr/local/bin/R -s -f "+this.scriptPath+"/importWavFiles.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -26,7 +27,7 @@ class EmuDbManager {
 
     async createBundleList() {
         return new Promise((resolve, reject) => {
-            exec("/usr/local/bin/R -s -f "+__dirname+"/scripts/createBundleList.R", (error, stdout, stderr) => {
+            exec("/usr/local/bin/R -s -f "+this.scriptPath+"/createBundleList.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -34,7 +35,7 @@ class EmuDbManager {
 
     async createAnnotationLevels() {
         return new Promise((resolve, reject) => {
-            exec("/usr/local/bin/R -s -f "+__dirname+"/scripts/addAnnotationLevelDefinition.R", (error, stdout, stderr) => {
+            exec("/usr/local/bin/R -s -f "+this.scriptPath+"/addAnnotationLevelDefinition.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -42,7 +43,7 @@ class EmuDbManager {
 
     async createAnnotationLevelLinks() {
         return new Promise((resolve, reject) => {
-            exec("/usr/local/bin/R -s -f "+__dirname+"/scripts/addAnnotationLevelLinkDefinition.R", (error, stdout, stderr) => {
+            exec("/usr/local/bin/R -s -f "+this.scriptPath+"/addAnnotationLevelLinkDefinition.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -85,7 +86,7 @@ class EmuDbManager {
 
     async getSessions(projectPath = "./") {
         return new Promise((resolve, reject) => {
-            exec("PROJECT_PATH="+projectPath+" R -s -f "+__dirname+"/scripts/getSessions.R", (error, stdout, stderr) => {
+            exec("PROJECT_PATH="+projectPath+" R -s -f "+this.scriptPath+"/getSessions.R", (error, stdout, stderr) => {
                 stdout = stdout.trim();
                 let outputLines = stdout.split("\n");
                 let jsonData = outputLines.slice(-1)[0]; //Last row is where we expect the relevant output to be
@@ -97,7 +98,7 @@ class EmuDbManager {
 
     async getBundles(projectPath = "./") {
         return new Promise((resolve, reject) => {
-            exec("PROJECT_PATH="+projectPath+" R -s -f "+__dirname+"/scripts/getBundles.R", (error, stdout, stderr) => {
+            exec("PROJECT_PATH="+projectPath+" R -s -f "+this.scriptPath+"/getBundles.R", (error, stdout, stderr) => {
                 stdout = stdout.trim();
                 let outputLines = stdout.split("\n");
                 let jsonData = outputLines.slice(-1)[0]; //Last row is where we expect the relevant output to be
@@ -126,7 +127,7 @@ class EmuDbManager {
     //This might be redundant since this information seems to exist in the *_DBconfig.json
     async getAnnotLevels(projectPath = "./") {
         return new Promise((resolve, reject) => {
-            exec("PROJECT_PATH="+projectPath+" R -s -f "+__dirname+"/scripts/getAnnotLevels.R", (error, stdout, stderr) => {
+            exec("PROJECT_PATH="+projectPath+" R -s -f "+this.scriptPath+"/getAnnotLevels.R", (error, stdout, stderr) => {
                 stdout = stdout.trim();
                 let outputLines = stdout.split("\n");
                 let jsonData = outputLines.slice(-1)[0]; //Last row is where we expect the relevant output to be
