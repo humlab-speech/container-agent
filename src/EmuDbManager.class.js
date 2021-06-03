@@ -7,7 +7,6 @@ class EmuDbManager {
         this.app = app;
         this.emuDbPrefix = "VISP";
         this.scriptPath = "/container-agent/scripts";
-        this.scriptPath = "./src/scripts";
     }
 
     async create() {
