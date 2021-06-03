@@ -4,8 +4,6 @@ const ApiResponse = require('./ApiResponse.class.js');
 const GitRepository = require('./GitRepository.class.js');
 const EmuDbManager = require('./EmuDbManager.class.js');
 
-const version = '1.2.0';
-
 process.env.GIT_SSL_NO_VERIFY=true; //This is only needed for local testing
 
 /**
@@ -67,11 +65,6 @@ else {
     let args = process.argv;
     args.splice(0, 3);
 
-    if(cmd == 'version') {
-        console.log(version);
-        return;
-    }
-
     const gitCommands = ['clone', 'pull', 'add', 'commit', 'reset', 'push', 'status', 'checkout', 'save'];
     let repo = null;
     if(gitCommands.includes(cmd)) {
@@ -128,6 +121,9 @@ else {
             break;
         case "emudb-create-annotlevellinks":
             emudbMan.createAnnotationLevelLinks().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
+        case "emudb-setlevelcanvasesorder":
+            emudbMan.setLevelCanvasesOrder().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case "emudb-scan":
             emudbMan.scan().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));

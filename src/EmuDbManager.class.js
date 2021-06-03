@@ -49,6 +49,14 @@ class EmuDbManager {
         });
     }
 
+    async setLevelCanvasesOrder( ){
+        return new Promise((resolve, reject) => {
+            exec("R -s -f "+this.scriptPath+"/setLevelCanvasesOrder.R", (error, stdout, stderr) => {
+                resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
+            });
+        });
+    }
+
     async scan() {
         //const PROJECT_PATH = './test-1n'; // /home/rstudio/project/Data/humlabspeech_emuDB
         const PROJECT_PATH = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : "/home/rstudio/project";
