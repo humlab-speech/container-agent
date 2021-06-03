@@ -1,8 +1,12 @@
 library(emuR)
 library(jsonlite)
+library(base64enc)
 dbPath = file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
 VISPDB = load_emuDB(dbPath)
-levels = fromJSON(Sys.getenv("ANNOT_LEVELS"))
+
+#The ANNOT_LEVELS envvar is a base64-encoded JSON, since sending plain JSON would be problematic upstream
+levelsJson = rawToChar(base64decode(Sys.getenv("ANNOT_LEVELS")))
+levels = fromJSON(levelsJson)
 
 segments = c()
 events = c()
