@@ -7,6 +7,7 @@ class EmuDbManager {
         this.app = app;
         this.emuDbPrefix = "VISP";
         this.scriptPath = "/container-agent/scripts";
+        this.scriptPath = "./src/scripts";
     }
 
     async create() {
@@ -44,6 +45,14 @@ class EmuDbManager {
     async createAnnotationLevelLinks() {
         return new Promise((resolve, reject) => {
             exec("/usr/local/bin/R -s -f "+this.scriptPath+"/addAnnotationLevelLinkDefinition.R", (error, stdout, stderr) => {
+                resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
+            });
+        });
+    }
+
+    async setLevelCanvasesOrder( ){
+        return new Promise((resolve, reject) => {
+            exec("R -s -f "+this.scriptPath+"/setLevelCanvasesOrder.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
