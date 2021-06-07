@@ -3,23 +3,41 @@ const fs = require('fs');
 const ApiResponse = require('./ApiResponse.class.js');
 
 class EmuDbManager {
-    constructor(app) {
+    constructor(app, repoPath) {
         this.app = app;
+        this.repoPath = repoPath;
         this.emuDbPrefix = "VISP";
         this.scriptPath = "/container-agent/scripts";
     }
 
     async create() {
         return new Promise((resolve, reject) => {
-            exec("/usr/local/bin/R -s -f "+this.scriptPath+"/createEmuDb.R", (error, stdout, stderr) => {
+            exec("R -s -f "+this.scriptPath+"/createEmuDb.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
     }
-
-    async importWavs() {
+    
+    async createSessions() {
         return new Promise((resolve, reject) => {
-            exec("/usr/local/bin/R -s -f "+this.scriptPath+"/importWavFiles.R", (error, stdout, stderr) => {
+            exec("R -s -f "+this.scriptPath+"/createSessions.R", (error, stdout, stderr) => {
+                if(process.env.EMUDB_SESSIONS) {
+                    let sessions = JSON.parse(Buffer.from(process.env.EMUDB_SESSIONS, 'base64').toString('utf8'));
+
+                    for(let key in sessions) {
+                        let session = sessions[key];
+                        let sessionMeta = {
+                            Gender: session.speakerGender,
+                            Age: session.speakerAge
+                        }
+
+                        let sessionMachineName = session.name.replace(/ /, "_");
+
+                        let filePath = this.repoPath+"/Data/"+this.emuDbPrefix+"_emuDB/"+sessionMachineName+"_ses/"+sessionMachineName+".meta_json";
+                        fs.writeFileSync(filePath, JSON.stringify(sessionMeta));
+                    }
+                }
+                
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -27,7 +45,7 @@ class EmuDbManager {
 
     async createBundleList() {
         return new Promise((resolve, reject) => {
-            exec("/usr/local/bin/R -s -f "+this.scriptPath+"/createBundleList.R", (error, stdout, stderr) => {
+            exec("R -s -f "+this.scriptPath+"/createBundleList.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -35,7 +53,7 @@ class EmuDbManager {
 
     async createAnnotationLevels() {
         return new Promise((resolve, reject) => {
-            exec("/usr/local/bin/R -s -f "+this.scriptPath+"/addAnnotationLevelDefinition.R", (error, stdout, stderr) => {
+            exec("R -s -f "+this.scriptPath+"/addAnnotationLevelDefinition.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -43,7 +61,7 @@ class EmuDbManager {
 
     async createAnnotationLevelLinks() {
         return new Promise((resolve, reject) => {
-            exec("/usr/local/bin/R -s -f "+this.scriptPath+"/addAnnotationLevelLinkDefinition.R", (error, stdout, stderr) => {
+            exec("R -s -f "+this.scriptPath+"/addAnnotationLevelLinkDefinition.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });

@@ -94,7 +94,7 @@ else {
 
     let emudbMan = null;
     if(cmd.split("-")[0] == "emudb") {
-        emudbMan = new EmuDbManager();
+        emudbMan = new EmuDbManager(this, process.env.PROJECT_PATH);
     }
     
     switch(cmd) {
@@ -110,8 +110,8 @@ else {
         case "emudb-create":
             emudbMan.create().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
-        case "emudb-import-wavs":
-            emudbMan.importWavs().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+        case "emudb-create-sessions":
+            emudbMan.createSessions().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
             break;
         case "emudb-create-bundlelist":
             emudbMan.createBundleList().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
