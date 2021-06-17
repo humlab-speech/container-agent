@@ -3,12 +3,20 @@ const copy = require('recursive-copy');
 const ApiResponse = require('./ApiResponse.class.js');
 const GitRepository = require('./GitRepository.class.js');
 const EmuDbManager = require('./EmuDbManager.class.js');
+const dotenv = require('dotenv');
 
-process.env.GIT_SSL_NO_VERIFY=true; //This is only needed for local testing
+if(typeof process.env.CONTAINER_AGENT_TEST == "undefined") {
+    process.env.CONTAINER_AGENT_TEST = 'false';
+}
+
+if(process.env.CONTAINER_AGENT_TEST === 'true') {
+    dotenv.config();
+}
 
 /**
  * This agent is aware of the following env-vars:
  *
+ * CONTAINER_AGENT_TEST - Toggle test/dev mode on/off - if it's on the .env-file is read
  * GIT_USER_NAME
  * GIT_USER_EMAIL
  * GIT_BRANCH
@@ -94,7 +102,7 @@ else {
 
     let emudbMan = null;
     if(cmd.split("-")[0] == "emudb") {
-        emudbMan = new EmuDbManager(this, process.env.PROJECT_PATH);
+        emudbMan = new EmuDbManager(this);
     }
     
     switch(cmd) {

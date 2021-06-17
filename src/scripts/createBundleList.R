@@ -1,4 +1,4 @@
-library(emuR)
+library(emuR, warn.conflicts = FALSE)
 dbPath = file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
 dbHandle = load_emuDB(dbPath)
 bndls = list_bundles(dbHandle)

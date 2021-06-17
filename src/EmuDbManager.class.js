@@ -3,11 +3,15 @@ const fs = require('fs');
 const ApiResponse = require('./ApiResponse.class.js');
 
 class EmuDbManager {
-    constructor(app, repoPath) {
+    constructor(app) {
         this.app = app;
-        this.repoPath = repoPath;
         this.emuDbPrefix = "VISP";
         this.scriptPath = "/container-agent/scripts";
+
+        if(process.env.CONTAINER_AGENT_TEST == 'true') {
+            this.scriptPath = "./src/scripts";
+            process.env.UPLOAD_PATH = "./uploads";
+        }
     }
 
     async create() {
@@ -17,30 +21,53 @@ class EmuDbManager {
             });
         });
     }
-    
+
     async createSessions() {
         return new Promise((resolve, reject) => {
             exec("R -s -f "+this.scriptPath+"/createSessions.R", (error, stdout, stderr) => {
-                if(process.env.EMUDB_SESSIONS) {
-                    let sessions = JSON.parse(Buffer.from(process.env.EMUDB_SESSIONS, 'base64').toString('utf8'));
-
-                    for(let key in sessions) {
-                        let session = sessions[key];
-                        let sessionMeta = {
-                            Gender: session.speakerGender,
-                            Age: session.speakerAge
-                        }
-
-                        let sessionMachineName = session.name.replace(/ /, "_");
-
-                        let filePath = this.repoPath+"/Data/"+this.emuDbPrefix+"_emuDB/"+sessionMachineName+"_ses/"+sessionMachineName+".meta_json";
-                        fs.writeFileSync(filePath, JSON.stringify(sessionMeta));
-                    }
+                if(error != null && error.code != 0) {
+                    resolve(new ApiResponse(500, { stdout: stdout, stderr: stderr, error: error }));
                 }
-                
-                resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
+
+                this.writeMetaDataToSessions();
+                resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error }));
             });
         });
+    }
+
+    writeMetaDataToSessions() {
+        if(!process.env.EMUDB_SESSIONS) {
+            return false;
+        }
+        let sessions = null;
+        try {
+            sessions = JSON.parse(Buffer.from(process.env.EMUDB_SESSIONS, 'base64').toString('utf8'));
+        }
+        catch(error) {
+            return {
+                status: false,
+                message: error.toString()
+            };
+        }
+        
+        for(let key in sessions) {
+            let session = sessions[key];
+            let sessionMeta = {
+                Gender: session.speakerGender,
+                Age: session.speakerAge
+            }
+
+            let sessionMachineName = session.name.replace(/ /, "_");
+            let sessionDirectoryPath = process.env.PROJECT_PATH+"/Data/"+this.emuDbPrefix+"_emuDB/"+sessionMachineName+"_ses";
+            
+            //It is possible that the session directory doesn not exist at this point if the user created a new session without any audio files (and only metadata), sort of a weird thing to do, but who am I to judge, so just create the session directory
+            if(!fs.existsSync(sessionDirectoryPath)) {
+                fs.mkdirSync(sessionDirectoryPath);
+            }
+            
+            let filePath = sessionDirectoryPath+"/"+sessionMachineName+".meta_json";
+            fs.writeFileSync(filePath, JSON.stringify(sessionMeta));
+        }
     }
 
     async createBundleList() {
@@ -76,19 +103,23 @@ class EmuDbManager {
     }
 
     async scan() {
-        //const PROJECT_PATH = './test-1n'; // /home/rstudio/project/Data/humlabspeech_emuDB
         const PROJECT_PATH = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : "/home/rstudio/project";
 
         return await Promise.all([
             this.getEmuDbConfig(PROJECT_PATH),
             this.getSessions(PROJECT_PATH),
             this.getBundles(PROJECT_PATH),
-            this.getAnnotLevels(PROJECT_PATH)
+            //this.getAnnotLevels(PROJECT_PATH)
             ])
             .then((datasets) => {
                 let dbConfig = datasets[0];
                 let sessions = datasets[1];
                 let bundles = datasets[2];
+
+                if(dbConfig.error) {
+                    return new ApiResponse(500, dbConfig.error);
+                }
+
                 //let annotLevels = datasets[3];
                 let output = {
                     dbConfig: dbConfig,
@@ -98,19 +129,77 @@ class EmuDbManager {
                 }
                 return new ApiResponse(200, output);
         }).catch((error) => {
-            console.log(error);
+            //console.log("emudb-scan threw error:");
+            //console.log(error);
+            return new ApiResponse(500, error);
         });
     }
 
     async getEmuDbConfig(projectPath = "./") {
         //Load the *_DBconfig.json
-        let rawJson = fs.readFileSync(projectPath+"/Data/"+this.emuDbPrefix+"_emuDB/"+this.emuDbPrefix+"_DBconfig.json", {
+        const dbConfigFilePath = projectPath+"/Data/"+this.emuDbPrefix+"_emuDB/"+this.emuDbPrefix+"_DBconfig.json";
+        if(!fs.existsSync(dbConfigFilePath)) {
+            return {
+                error: "getEmuDbConfig() - Path does not exist! : " + dbConfigFilePath
+            }
+        }
+        let rawJson = fs.readFileSync(dbConfigFilePath, {
             encoding: 'utf-8'
         });
         return JSON.parse(rawJson);
     }
 
     async getSessions(projectPath = "./") {
+        let sessions = [];
+        try {
+            let emuDbDirList = fs.readdirSync(projectPath + "/Data/VISP_emuDB");
+            const regex = RegExp('(.*)_ses', 'g');
+            for(let key in emuDbDirList) {
+                let result = regex.exec(emuDbDirList[key]);
+                if(result !== null) {
+                    sessions.push({
+                        path: result[0],
+                        name: result[1]
+                    });
+                }
+            }
+        }
+        catch(error) {
+            return error;
+        }
+        return sessions;
+    }
+
+    async getBundles(projectPath = "./") {
+        let sessions = await this.getSessions(projectPath);
+        let bundles = [];
+        const bundleRegex = RegExp('(.*)_bndl', 'g');
+
+        for(let sessKey in sessions) {
+            let session = sessions[sessKey];
+            try {
+                let sessionDirBundleList = fs.readdirSync(projectPath + "/Data/VISP_emuDB/" + session.name + "_ses");
+                
+                for(let bundleKey in sessionDirBundleList) {
+                    let result = bundleRegex.exec(sessionDirBundleList[bundleKey]);
+                    if(result !== null) {
+                        bundles.push({
+                            session: session.name,
+                            path: result[0],
+                            name: result[1]
+                        });
+                    }
+                }
+            }
+            catch(error) {
+                return error;
+            }
+        }
+
+        return bundles;
+    }
+
+    async getSessionsR(projectPath = "./") {
         return new Promise((resolve, reject) => {
             exec("PROJECT_PATH="+projectPath+" R -s -f "+this.scriptPath+"/getSessions.R", (error, stdout, stderr) => {
                 stdout = stdout.trim();
@@ -122,7 +211,7 @@ class EmuDbManager {
         });
     }
 
-    async getBundles(projectPath = "./") {
+    async getBundlesR(projectPath = "./") {
         return new Promise((resolve, reject) => {
             exec("PROJECT_PATH="+projectPath+" R -s -f "+this.scriptPath+"/getBundles.R", (error, stdout, stderr) => {
                 stdout = stdout.trim();
@@ -162,29 +251,6 @@ class EmuDbManager {
             });
         });
     }
-
-    /*
-    async getSessionsOld() {
-        try {
-            let emuDbDirList = fs.readdirSync(emuDbPath);
-            const regex = RegExp('(.*)_ses', 'g');
-            let sessions = [];
-            for(let key in emuDbDirList) {
-                let result = regex.exec(emuDbDirList[key]);
-                if(result !== null) {
-                    sessions.push({
-                        path: result[0],
-                        name: result[1]
-                    });
-                }
-            }
-            return sessions;
-        }
-        catch(error) {
-            console.log(error)
-        }
-    }
-    */
 
 }
 

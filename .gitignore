@@ -1,6 +1,11 @@
-test-2b
+'test-2b
 node_modules
 dist
 ./.parcel-cache
 setEnvVars.sh
 repo
+.env
+clear_sessions.sh
+env
+test-4a/
+uploads/

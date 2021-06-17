@@ -1,4 +1,4 @@
-library(emuR)
+library(emuR, warn.conflicts = FALSE)
 library(jsonlite)
 library(base64enc)
 dbPath = file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
