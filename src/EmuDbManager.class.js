@@ -94,6 +94,43 @@ class EmuDbManager {
         });
     }
 
+    async addDefaultPerspectives() {
+        return new Promise((resolve, reject) => {
+            exec("R -s -f "+this.scriptPath+"/addDefaultPerspectives.R", (error, stdout, stderr) => {
+                //Edit the VISP_DBconfig.json to add perspective => signalCanvases spec
+                const PROJECT_PATH = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : "/home/rstudio/project";
+                this.getEmuDbConfig(PROJECT_PATH).then(dbConfig => {
+                    dbConfig.EMUwebAppConfig.perspectives.forEach(perspective => {
+                        if(perspective.name == "Formants") {
+                            perspective.signalCanvases.assign.push({
+                                "signalCanvasName": "SPEC",
+                                "ssffTrackName": "FORMANTS"
+                            });
+                        }
+                        if(perspective.name == "Formants+F0") {
+                            perspective.signalCanvases.assign.push({
+                                "signalCanvasName": "SPEC",
+                                "ssffTrackName": "FORMANTS"
+                            });
+                        }
+                    });
+
+                    this.writeEmuDbConfig(dbConfig, PROJECT_PATH).then(() => {
+                        resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
+                    });
+                });
+            });
+        });
+    }
+
+    async addSsffTrackDefinitions() {
+        return new Promise((resolve, reject) => {
+            exec("R -s -f "+this.scriptPath+"/addSsffTrackDefinitions.R", (error, stdout, stderr) => {
+                resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
+            });
+        });
+    }
+
     async setLevelCanvasesOrder( ){
         return new Promise((resolve, reject) => {
             exec("R -s -f "+this.scriptPath+"/setLevelCanvasesOrder.R", (error, stdout, stderr) => {
@@ -147,6 +184,18 @@ class EmuDbManager {
             encoding: 'utf-8'
         });
         return JSON.parse(rawJson);
+    }
+
+    async writeEmuDbConfig(dbConfig, projectPath = "./") {
+        const dbConfigFilePath = projectPath+"/Data/"+this.emuDbPrefix+"_emuDB/"+this.emuDbPrefix+"_DBconfig.json";
+        try {
+            fs.writeFileSync(dbConfigFilePath, JSON.stringify(dbConfig));
+        }
+        catch(error) {
+            console.log(error);
+            return false;
+        }
+        return true;
     }
 
     async getSessions(projectPath = "./") {

@@ -38,3 +38,5 @@ for(evt in events) {
 
 #Apply to emuDB
 set_levelCanvasesOrder(VISPDB, perspectiveName = "default", order = levelOrder)
+set_levelCanvasesOrder(VISPDB, perspectiveName = "Formants", order = levelOrder)
+set_levelCanvasesOrder(VISPDB, perspectiveName = "Formants+F0", order = levelOrder)
