@@ -202,7 +202,7 @@ class EmuDbManager {
         let sessions = [];
         try {
             let emuDbDirList = fs.readdirSync(projectPath + "/Data/VISP_emuDB");
-            const regex = RegExp('(.*)_ses', 'g');
+            const regex = RegExp('(.*)_ses');
             for(let key in emuDbDirList) {
                 let result = regex.exec(emuDbDirList[key]);
                 if(result !== null) {
