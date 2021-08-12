@@ -1,3 +1,3 @@
 library(emuR, warn.conflicts = FALSE)
 dbPath = file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
-dbHandle = load_emuDB(dbPath)
+VISPDB = load_emuDB(dbPath)

@@ -100,6 +100,9 @@ class EmuDbManager {
                 //Edit the VISP_DBconfig.json to add perspective => signalCanvases spec
                 const PROJECT_PATH = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : "/home/rstudio/project";
                 this.getEmuDbConfig(PROJECT_PATH).then(dbConfig => {
+                    if(!dbConfig.EMUwebAppConfig.perspectives) {
+                        reject();
+                    }
                     dbConfig.EMUwebAppConfig.perspectives.forEach(perspective => {
                         if(perspective.name == "Formants") {
                             perspective.signalCanvases.assign.push({

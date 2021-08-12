@@ -3,7 +3,7 @@ library(jsonlite)
 library(base64enc)
 
 dbPath = file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
-dbHandle = load_emuDB(dbPath)
+VISPDB = load_emuDB(dbPath)
 
 #decode envvar EMUDB_SESSIONS, it's a base64-encoded json-string
 sessionsJson = rawToChar(base64decode(Sys.getenv("EMUDB_SESSIONS")))
@@ -20,5 +20,5 @@ for(i in 1:nrow(sessions)) {
 
   print(paste("Importing session", sessionName, "using audio files from", wavDir))
 
-  import_mediaFiles(dbHandle, dir = wavDir, targetSessionName = sessionName, verbose = FALSE)
+  import_mediaFiles(VISPDB, dir = wavDir, targetSessionName = sessionName, verbose = FALSE)
 }

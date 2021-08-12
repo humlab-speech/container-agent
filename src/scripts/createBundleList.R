@@ -1,5 +1,5 @@
 library(emuR, warn.conflicts = FALSE)
 dbPath = file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
-dbHandle = load_emuDB(dbPath)
-bndls = list_bundles(dbHandle)
-write_bundleList(dbHandle, name = "user.user", bndls)
+VISPDB = load_emuDB(dbPath)
+bndls = list_bundles(VISPDB)
+write_bundleList(VISPDB, name = "user.user", bndls)
