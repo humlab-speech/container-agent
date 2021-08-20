@@ -103,20 +103,22 @@ class EmuDbManager {
                     if(!dbConfig.EMUwebAppConfig.perspectives) {
                         reject();
                     }
-                    dbConfig.EMUwebAppConfig.perspectives.forEach(perspective => {
-                        if(perspective.name == "Formants") {
-                            perspective.signalCanvases.assign.push({
-                                "signalCanvasName": "SPEC",
-                                "ssffTrackName": "FORMANTS"
-                            });
-                        }
-                        if(perspective.name == "Formants+F0") {
-                            perspective.signalCanvases.assign.push({
-                                "signalCanvasName": "SPEC",
-                                "ssffTrackName": "FORMANTS"
-                            });
-                        }
-                    });
+                    if(dbConfig.EMUwebAppConfig.perspectives) {
+                        dbConfig.EMUwebAppConfig.perspectives.forEach(perspective => {
+                            if(perspective.name == "Formants") {
+                                perspective.signalCanvases.assign.push({
+                                    "signalCanvasName": "SPEC",
+                                    "ssffTrackName": "FORMANTS"
+                                });
+                            }
+                            if(perspective.name == "Formants+F0") {
+                                perspective.signalCanvases.assign.push({
+                                    "signalCanvasName": "SPEC",
+                                    "ssffTrackName": "FORMANTS"
+                                });
+                            }
+                        });
+                    }
 
                     this.writeEmuDbConfig(dbConfig, PROJECT_PATH).then(() => {
                         resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
