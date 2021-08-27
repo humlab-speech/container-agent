@@ -128,6 +128,14 @@ class EmuDbManager {
         });
     }
 
+    async addTrackDefinitions() {
+        return new Promise((resolve, reject) => {
+            exec("R -s -f "+this.scriptPath+"/addTrackDefinitions.R", (error, stdout, stderr) => {
+                resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
+            });
+        });
+    }
+
     async addSsffTrackDefinitions() {
         return new Promise((resolve, reject) => {
             exec("R -s -f "+this.scriptPath+"/addSsffTrackDefinitions.R", (error, stdout, stderr) => {

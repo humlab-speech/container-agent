@@ -133,6 +133,9 @@ else {
         case "emudb-add-default-perspectives":
             emudbMan.addDefaultPerspectives().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
+        case "emudb-track-definitions":
+            emudbMan.addTrackDefinitions().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
         case "emudb-ssff-track-definitions":
             emudbMan.addSsffTrackDefinitions().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
