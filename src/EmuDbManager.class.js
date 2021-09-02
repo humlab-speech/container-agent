@@ -101,7 +101,7 @@ class EmuDbManager {
                 const PROJECT_PATH = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : "/home/rstudio/project";
                 this.getEmuDbConfig(PROJECT_PATH).then(dbConfig => {
                     if(!dbConfig.EMUwebAppConfig.perspectives) {
-                        reject();
+                        reject(new ApiResponse(500, "dbConfig.EMUwebAppConfig.perspectives was not defined"));
                     }
                     if(dbConfig.EMUwebAppConfig.perspectives) {
                         dbConfig.EMUwebAppConfig.perspectives.forEach(perspective => {
