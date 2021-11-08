@@ -16,6 +16,18 @@ class EmuDbManager {
 
     async create() {
         return new Promise((resolve, reject) => {
+
+            //Make sure the speakerAge meta param is always an integer and not a string
+            let sessionsJson = Buffer.from(process.env['EMUDB_SESSIONS'], 'base64').toString("utf8");
+            let sessions = JSON.parse(sessionsJson);
+            for(let key in sessions) {
+                if(sessions[key].speakerAge) {
+                    sessions[key].speakerAge = parseInt(sessions[key].speakerAge);
+                }
+            }
+
+            process.env['EMUDB_SESSIONS'] = Buffer.from(JSON.stringify(sessions), 'utf8').toString("base64");
+
             exec("R -s -f "+this.scriptPath+"/createEmuDb.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
