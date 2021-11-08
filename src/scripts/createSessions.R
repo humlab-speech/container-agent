@@ -17,9 +17,15 @@ for(i in 1:nrow(sessions)) {
   speakerAge = sessions[i, "speakerAge"]
   files = sessions[i, "files"]
 
-  wavDir = file.path(Sys.getenv("UPLOAD_PATH"), "emudb-sessions", sessionId)
+
+  if(Sys.getenv("SIMULATION") == "true") {
+    wavDir = file.path("/tmp/wavs")
+  }
+  else {
+    wavDir = file.path(Sys.getenv("UPLOAD_PATH"), "emudb-sessions", sessionId)
+  }  
 
   print(paste("Importing session", sessionName, "using audio files from", wavDir))
 
-  import_mediaFiles(VISPDB, dir = wavDir, targetSessionName = sessionName, verbose = FALSE)
+  import_recordings(VISPDB, dir = wavDir, targetSessionName = sessionName, verbose = FALSE)
 }
