@@ -116,15 +116,24 @@ async function simulateProjectCreation(emudbMan) {
     process.env['ANNOT_LEVEL_LINK_DEF_TYPE'] = "ONE_TO_MANY";
     console.log("\ncreateAnnotationLevelLinks");
     await emudbMan.createAnnotationLevelLinks().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+    
+    //emudb-add-default-perspectives - perhaps this should exec BEFORE setLevelCanvasesOrder?
+    console.log("\naddDefaultPerspectives");
+    await emudbMan.addDefaultPerspectives().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+    
     //emudb-setlevelcanvasesorder
     console.log("\nsetLevelCanvasesOrder");
     await emudbMan.setLevelCanvasesOrder().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
-    //emudb-add-default-perspectives
-    console.log("\naddDefaultPerspectives");
-    await emudbMan.addDefaultPerspectives().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+    
     //emudb-track-definitions
     console.log("\naddTrackDefinitions");
     await emudbMan.addTrackDefinitions().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+
+    //emudb-setsignalcanvasesorder
+    console.log("\nsetSignalCanvasesOrder");
+    await emudbMan.setSignalCanvasesOrder().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));    
+    
+    
     //full-recursive-copy
     //await fullRecursiveCopy(args[0], args[1]).then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
     //...and then a push to git
@@ -209,6 +218,9 @@ else {
             break;
         case "emudb-ssff-track-definitions":
             emudbMan.addSsffTrackDefinitions().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
+        case "emudb-setsignalcanvasesorder":
+            emudbMan.setSignalCanvasesOrder().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case "emudb-setlevelcanvasesorder":
             emudbMan.setLevelCanvasesOrder().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));

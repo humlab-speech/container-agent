@@ -156,6 +156,14 @@ class EmuDbManager {
         });
     }
 
+    async setSignalCanvasesOrder( ){
+        return new Promise((resolve, reject) => {
+            exec("R -s -f "+this.scriptPath+"/setSignalCanvasesOrder.R", (error, stdout, stderr) => {
+                resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
+            });
+        });
+    }
+
     async setLevelCanvasesOrder( ){
         return new Promise((resolve, reject) => {
             exec("R -s -f "+this.scriptPath+"/setLevelCanvasesOrder.R", (error, stdout, stderr) => {
