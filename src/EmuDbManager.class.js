@@ -255,7 +255,6 @@ class EmuDbManager {
     async getBundles(projectPath = "./") {
         let sessions = await this.getSessions(projectPath);
         let bundles = [];
-        const bundleRegex = RegExp('(.*)_bndl', 'g');
 
         for(let sessKey in sessions) {
             let session = sessions[sessKey];
@@ -263,6 +262,7 @@ class EmuDbManager {
                 let sessionDirBundleList = fs.readdirSync(projectPath + "/Data/VISP_emuDB/" + session.name + "_ses");
                 
                 for(let bundleKey in sessionDirBundleList) {
+                    const bundleRegex = RegExp('(.*)_bndl', 'g');
                     let result = bundleRegex.exec(sessionDirBundleList[bundleKey]);
                     if(result !== null) {
                         bundles.push({
