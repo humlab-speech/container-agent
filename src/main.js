@@ -142,7 +142,8 @@ async function simulateProjectCreation(emudbMan) {
 }
 
 if(typeof process.argv[2] == 'undefined') {
-    return console.log('No command supplied');
+    console.log('No command supplied');
+    throw new Error();
 }
 else {
 
@@ -156,6 +157,7 @@ else {
         let repoPath = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : null;
         let gitUserName = process.env.GIT_USER_NAME ? process.env.GIT_USER_NAME : null;
         let gitUserEmail = process.env.GIT_USER_EMAIL ? process.env.GIT_USER_EMAIL : null;
+        let bunldeLists = process.env.BUNDLE_LISTS ? process.env.BUNDLE_LISTS : null;
 
         let errors = [];
         if(repoPath == null) {
@@ -172,7 +174,7 @@ else {
             errors.forEach(error => {
                 console.error(error.toJSON());
             });
-            return false;
+            throw new Error();
         }
         repo = new GitRepository(repoPath, gitUserName, gitUserEmail);
     }
@@ -203,6 +205,9 @@ else {
             break;
         case "emudb-create-bundlelist":
             emudbMan.createBundleList().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
+        case "emudb-update-bundle-lists":
+            emudbMan.updateBundleLists().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
             break;
         case "emudb-create-annotlevels":
             emudbMan.createAnnotationLevels().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));

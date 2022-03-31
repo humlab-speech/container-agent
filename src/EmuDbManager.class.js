@@ -90,6 +90,30 @@ class EmuDbManager {
         });
     }
 
+    async updateBundleLists() {
+        let bundleListsJson = new Buffer.from(process.env.BUNDLE_LISTS, 'base64');
+        let bundleLists =JSON.parse(bundleListsJson);
+        let projectPath = process.env.PROJECT_PATH;
+
+        return new Promise((resolve, reject) => {
+            bundleLists.forEach(user => {
+                let bundleList = [];
+                user.bundles.forEach(bundle => {
+                    bundleList.push({
+                        session: bundle.session,
+                        name: bundle.name,
+                        comment: "",
+                        finishedEditing: false
+                    });
+                })
+                let path = projectPath+"/Data/VISP_emuDB/bundleLists";
+                fs.writeFileSync(path+"/"+user.username+"_bundleList.json", JSON.stringify(bundleList, null, 2));
+            });
+
+            resolve(new ApiResponse(200, { stdout: "", stderr: "", error: "" } ));
+        });
+    }
+
     async createAnnotationLevels() {
         return new Promise((resolve, reject) => {
             exec("R -s -f "+this.scriptPath+"/addAnnotationLevelDefinition.R", (error, stdout, stderr) => {
@@ -179,12 +203,14 @@ class EmuDbManager {
             this.getEmuDbConfig(PROJECT_PATH),
             this.getSessions(PROJECT_PATH),
             this.getBundles(PROJECT_PATH),
+            this.getBundleLists(PROJECT_PATH)
             //this.getAnnotLevels(PROJECT_PATH)
             ])
             .then((datasets) => {
                 let dbConfig = datasets[0];
                 let sessions = datasets[1];
                 let bundles = datasets[2];
+                let bundleLists = datasets[3];
 
                 if(dbConfig.error) {
                     return new ApiResponse(500, dbConfig.error);
@@ -195,6 +221,7 @@ class EmuDbManager {
                     dbConfig: dbConfig,
                     sessions: sessions,
                     bundles: bundles,
+                    bundleLists: bundleLists
                     //annotLevels: annotLevels
                 }
                 return new ApiResponse(200, output);
@@ -281,6 +308,21 @@ class EmuDbManager {
         return bundles;
     }
 
+    async getBundleLists(projectPath = "./") {
+        let bundleListFiles = fs.readdirSync(projectPath + "/Data/VISP_emuDB/bundleLists");
+        let bundleLists = [];
+        for(let key in bundleListFiles) {
+            let bundleList = fs.readFileSync(projectPath + "/Data/VISP_emuDB/bundleLists/" + bundleListFiles[key]);
+            let breakPoint = bundleListFiles[key].lastIndexOf("_");
+            bundleLists.push({
+                username: bundleListFiles[key].substring(0, breakPoint),
+                file: bundleListFiles[key],
+                bundleList: JSON.parse(bundleList)
+            });
+        }
+        return bundleLists;
+    }
+
     async getSessionsR(projectPath = "./") {
         return new Promise((resolve, reject) => {
             exec("PROJECT_PATH="+projectPath+" R -s -f "+this.scriptPath+"/getSessions.R", (error, stdout, stderr) => {
@@ -314,11 +356,6 @@ class EmuDbManager {
                 resolve(bundles);
             });
         });
-    }
-
-    //This should probably be implemented at some point, but don't need it right now...
-    async getBundleLists(projectPath = "./") {
-        return [];
     }
 
     //This might be redundant since this information seems to exist in the *_DBconfig.json
