@@ -5,6 +5,7 @@ const GitRepository = require('./GitRepository.class.js');
 const EmuDbManager = require('./EmuDbManager.class.js');
 const dotenv = require('dotenv');
 const fs = require('fs');
+const { exec } = require("child_process");
 
 if(typeof process.env.CONTAINER_AGENT_TEST == "undefined") {
     process.env.CONTAINER_AGENT_TEST = 'false';
@@ -34,6 +35,14 @@ function copyDocs() {
     })
     .catch(function(error) {
         return new ApiResponse(400, 'Copy failed' + error);
+    });
+}
+
+async function chownDirectory(directory, toUser = "root") {
+    return new Promise((resolve, reject) => {
+        exec("chown -R "+toUser+" "+directory, (error, stdout, stderr) => {
+            resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
+        });
     });
 }
 
@@ -191,6 +200,9 @@ else {
         case "copy-docs":
             copyDocs().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
+        case "chown-directory":
+            chownDirectory(args[0], args[1]).then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
         case "copy-project-template-directory":
             copyProjectTemplateDirectory().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
@@ -257,30 +269,42 @@ else {
         case 'checkout':
             repo.checkoutBranch().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
-        case 'save': //Save is just a shorthand for pull+add+commit+push
-            //Try to pull in any changes
-            repo.pull().then((ar) => {
+        case 'save': //Save is just a shorthand for chown+pull+add+commit+push
+            chownDirectory(repo.repoPath, "root:root").then(ar => {
                 if(ar.code != 200) {
                     //If last operation caused an error, abort and return 
                     console.log(ar.toJSON());
                     return;
                 }
-                repo.add().then((ar) => {
+                //Try to pull in any changes
+                repo.pull().then((ar) => {
                     if(ar.code != 200) {
                         //If last operation caused an error, abort and return 
                         console.log(ar.toJSON());
                         return;
                     }
-                    repo.commit().then((ar) => {
+                    repo.add().then((ar) => {
                         if(ar.code != 200) {
                             //If last operation caused an error, abort and return 
                             console.log(ar.toJSON());
                             return;
                         }
-                        repo.push().then(ar => console.log(ar.toJSON()));
+                        repo.commit().then((ar) => {
+                            if(ar.code != 200) {
+                                //If last operation caused an error, abort and return 
+                                console.log(ar.toJSON());
+                                return;
+                            }
+                            repo.push().then(ar => {
+                                //Reset directory owner to 'main' container user
+                                chownDirectory(repo.repoPath, "1000:1000"); //this will cause a problem if we at some point in the future have containers beyond rstudio and jupyter which 'main' user is not uid 1000
+                                console.log(ar.toJSON())
+                            });
+                        });
                     });
                 });
-            });
+            })
+            
             break;
     }
 
