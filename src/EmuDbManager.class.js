@@ -103,7 +103,7 @@ class EmuDbManager {
                         session: bundle.session,
                         name: bundle.name,
                         comment: "",
-                        finishedEditing: false
+                        finishedEditing: bundle.finishedEditing
                     });
                 })
                 let path = projectPath+"/Data/VISP_emuDB/bundleLists";
