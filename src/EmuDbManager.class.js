@@ -95,6 +95,10 @@ class EmuDbManager {
         let bundleLists =JSON.parse(bundleListsJson);
         let projectPath = process.env.PROJECT_PATH;
 
+        let path = projectPath+"/Data/VISP_emuDB/bundleLists";
+        //check that the 'bundleLists' directory exists first - which may not always be the case
+        await this.mkdir(path);
+
         return new Promise((resolve, reject) => {
             bundleLists.forEach(user => {
                 let bundleList = [];
@@ -105,12 +109,20 @@ class EmuDbManager {
                         comment: "",
                         finishedEditing: bundle.finishedEditing
                     });
-                })
-                let path = projectPath+"/Data/VISP_emuDB/bundleLists";
+                });
+
                 fs.writeFileSync(path+"/"+user.username+"_bundleList.json", JSON.stringify(bundleList, null, 2));
             });
 
             resolve(new ApiResponse(200, { stdout: "", stderr: "", error: "" } ));
+        });
+    }
+
+    async mkdir(path) {
+        fs.stat(path, {}, (err) => {
+            if(err != null && err.code == "ENOENT") {
+                fs.mkdirSync(path);
+            }
         });
     }
 
