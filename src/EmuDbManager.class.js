@@ -118,11 +118,16 @@ class EmuDbManager {
         });
     }
 
-    async mkdir(path) {
-        fs.stat(path, {}, (err) => {
-            if(err != null && err.code == "ENOENT") {
-                fs.mkdirSync(path);
-            }
+    async mkdir(path, recursive = true) {
+        return new Promise((resolve, reject) => {
+            fs.stat(path, {}, (err) => {
+                if(err != null && err.code == "ENOENT") {
+                    fs.mkdirSync(path, {
+                        recursive: recursive
+                    });
+                }
+                resolve();
+            });
         });
     }
 
