@@ -246,7 +246,12 @@ else {
             emudbMan.scan().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
             break;
         case 'clone':
-            repo.clone().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            let sparse = false;
+            if(args.length > 0 && args[0] == "sparse") {
+                sparse = true;
+            }
+            sparse = true;
+            repo.clone(sparse).then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case "pull":
             repo.pull().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));

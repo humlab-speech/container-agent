@@ -1,3 +1,4 @@
+const { exec } = require("child_process");
 const simpleGit = require('simple-git')
 const ApiResponse = require('./ApiResponse.class.js');
 
@@ -15,13 +16,26 @@ class GitRepository {
             .addConfig('user.email', this.gitUserEmail);
     }
 
-    async clone() {
+    async clone(sparse = false) {
         if(!process.env.GIT_REPOSITORY_URL) {
             return new ApiResponse(500, 'Envvar GIT_REPOSITORY_URL is not set');
         }
 
-        return this.git.clone(process.env.GIT_REPOSITORY_URL, this.repoPath)
-        .then(t => {
+        let options = [];
+        if(sparse) {
+            options.push("--no-checkout");
+        }
+
+        return this.git.clone(process.env.GIT_REPOSITORY_URL, this.repoPath, options)
+        .then(async t => {
+            if(sparse) {
+                await new Promise((resolve, reject) => {
+                    exec("cd "+this.repoPath+" && git sparse-checkout init && git sparse-checkout set Data/VISP_emuDB/VISP_DBconfig.json", (error, stdout, stderr) => {
+                        resolve();
+                    });
+                });
+            }
+            
             return new ApiResponse(200, 'ok');
         })
         .catch(error => {
