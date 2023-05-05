@@ -1,8 +1,9 @@
-const { exec } = require("child_process");
-const fs = require('fs');
-const ApiResponse = require('./ApiResponse.class.js');
+import { exec } from "child_process";
+import fs from 'fs';
+import { nanoid } from "nanoid";
+import ApiResponse from './ApiResponse.class.mjs';
 
-class EmuDbManager {
+export default class EmuDbManager {
     constructor(app) {
         this.app = app;
         this.emuDbPrefix = "VISP";
@@ -17,6 +18,7 @@ class EmuDbManager {
     async create() {
         return new Promise((resolve, reject) => {
 
+            /* we actually don't need any sessions data just to create an emu-db...
             //Make sure the speakerAge meta param is always an integer and not a string
             let sessionsJson = Buffer.from(process.env['EMUDB_SESSIONS'], 'base64').toString("utf8");
             let sessions = JSON.parse(sessionsJson);
@@ -27,6 +29,7 @@ class EmuDbManager {
             }
 
             process.env['EMUDB_SESSIONS'] = Buffer.from(JSON.stringify(sessions), 'utf8').toString("base64");
+            */
 
             exec("R -s -f "+this.scriptPath+"/createEmuDb.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
@@ -41,7 +44,10 @@ class EmuDbManager {
                     resolve(new ApiResponse(500, { stdout: stdout, stderr: stderr, error: error }));
                 }
 
-                this.writeMetaDataToSessions();
+                if(process.env.WRITE_META_JSON != "false" && process.env.WRITE_META_JSON !== false) {
+                    this.writeMetaDataToSessions();
+                }
+                
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error }));
             });
         });
@@ -65,6 +71,7 @@ class EmuDbManager {
         for(let key in sessions) {
             let session = sessions[key];
             let sessionMeta = {
+                SessionId: session.sessionId ? session.sessionId : nanoid(),
                 Gender: session.speakerGender,
                 Age: session.speakerAge
             }
@@ -158,17 +165,39 @@ class EmuDbManager {
                     }
                     if(dbConfig.EMUwebAppConfig.perspectives) {
                         dbConfig.EMUwebAppConfig.perspectives.forEach(perspective => {
+
                             if(perspective.name == "Formants") {
-                                perspective.signalCanvases.assign.push({
-                                    "signalCanvasName": "SPEC",
-                                    "ssffTrackName": "FORMANTS"
+                                //check that we don't already have these entries
+                                let found = false;
+                                perspective.signalCanvases.assign.forEach(assignment => {
+                                    if(assignment.signalCanvasName == "SPEC" && assignment.ssffTrackName == "FORMANTS") {
+                                        found = true;
+                                    }
                                 });
+
+                                if(!found) {
+                                    perspective.signalCanvases.assign.push({
+                                        "signalCanvasName": "SPEC",
+                                        "ssffTrackName": "FORMANTS"
+                                    });
+                                }
+                                
                             }
                             if(perspective.name == "Formants+F0") {
-                                perspective.signalCanvases.assign.push({
-                                    "signalCanvasName": "SPEC",
-                                    "ssffTrackName": "FORMANTS"
+                                //check that we don't already have these entries
+                                let found = false;
+                                perspective.signalCanvases.assign.forEach(assignment => {
+                                    if(assignment.signalCanvasName == "SPEC" && assignment.ssffTrackName == "FORMANTS") {
+                                        found = true;
+                                    }
                                 });
+
+                                if(!found) {
+                                    perspective.signalCanvases.assign.push({
+                                        "signalCanvasName": "SPEC",
+                                        "ssffTrackName": "FORMANTS"
+                                    });
+                                }
                             }
                         });
                     }
@@ -389,5 +418,3 @@ class EmuDbManager {
     }
 
 }
-
-module.exports = EmuDbManager

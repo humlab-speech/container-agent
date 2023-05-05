@@ -11,7 +11,7 @@ sessionsJson = rawToChar(base64decode(Sys.getenv("EMUDB_SESSIONS")))
 sessions = fromJSON(sessionsJson, simplifyVector = TRUE)
 
 for(i in 1:nrow(sessions)) {
-  sessionId = sessions[i, "id"]
+  sessionId = sessions[i, "sessionId"]
   sessionName = sessions[i, "name"]
   speakerGender = sessions[i, "speakerGender"]
   speakerAge = sessions[i, "speakerAge"]
