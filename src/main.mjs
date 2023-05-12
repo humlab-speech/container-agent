@@ -93,6 +93,9 @@ export default class ContainerAgent {
                 case "full-recursive-copy":
                     this.fullRecursiveCopy(args[0], args[1]).then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
                     break;
+                case "delete-sessions":
+                    this.deleteSessions().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
+                    break;
                 case "emudb-create":
                     emudbMan.create().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
                     break;
@@ -228,6 +231,24 @@ export default class ContainerAgent {
         .catch(function(error) {
             return new ApiResponse(400, 'Copy failed' + error);
         });
+    }
+
+    async deleteSessions() {
+        //we want to delete all the bundles in this session without deleting the session itself and the metadata file
+        let sessions = Buffer.from(process.env.EMUDB_SESSIONS, 'base64').toString('utf8');
+        JSON.parse(sessions).forEach(session => {
+            //scan the directory
+            let bundleNames = fs.readdirSync(process.env.PROJECT_PATH+"/Data/VISP_emuDB/"+session.name+"_ses");
+            //filter out the metadata file
+            bundleNames = bundleNames.filter(bundleName => bundleName != session.name+".meta_json");
+            //delete the bundles
+            bundleNames.forEach(bundleName => {
+                let path = process.env.PROJECT_PATH+"/Data/VISP_emuDB/"+session.name+"_ses/"+bundleName;
+                fs.rmdirSync(path, { recursive: true });
+            });
+        });
+
+        return new ApiResponse(200, "Deleted sessions");
     }
     
     async copyProjectTemplateDirectory() {
