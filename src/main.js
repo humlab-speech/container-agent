@@ -29,7 +29,8 @@ if(process.env.CONTAINER_AGENT_TEST === 'true') {
 
 
 function copyDocs() {
-    return copy('/home/uploads/docs', '/home/project-setup/Documents')
+    
+    return copy('/home/uploads/docs', process.env.PROJECT_PATH+'/Documents')
     .then(function(results) {
         return new ApiResponse(200, 'Copied ' + results.length + ' files');
     })
@@ -245,6 +246,9 @@ else {
         case "emudb-scan":
             emudbMan.scan().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
             break;
+        case "init":
+            repo.init().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+            break;
         case 'clone':
             let sparse = false;
             if(args.length > 0 && args[0] == "sparse") {
@@ -273,7 +277,23 @@ else {
         case 'checkout':
             repo.checkoutBranch().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
-        case 'save': //Save is just a shorthand for chown+pull+add+commit+push
+        case 'save':
+            repo.add().then((ar) => {
+                if(ar.code != 200) {
+                    //If last operation caused an error, abort and return 
+                    console.log(ar.toJSON());
+                    return;
+                }
+                repo.commit().then((ar) => {
+                    if(ar.code != 200) {
+                        //If last operation caused an error, abort and return 
+                        console.log(ar.toJSON());
+                        return;
+                    }
+                });
+            });
+            break;
+        case 'save-chmod': //Save is just a shorthand for chown+pull+add+commit+push
             chownDirectory(repo.repoPath, "root:root").then(ar => {
                 if(ar.code != 200) {
                     //If last operation caused an error, abort and return 

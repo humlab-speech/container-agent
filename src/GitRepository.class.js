@@ -16,6 +16,12 @@ class GitRepository {
             .addConfig('user.email', this.gitUserEmail);
     }
 
+    async init() {
+        return this.git.init().then(result => {
+            return new ApiResponse(200, 'ok');
+        }).catch(error => this.handleUnknownError(error));
+    }
+
     async clone(sparse = false) {
         if(!process.env.GIT_REPOSITORY_URL) {
             return new ApiResponse(500, 'Envvar GIT_REPOSITORY_URL is not set');

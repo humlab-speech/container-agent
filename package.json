@@ -13,7 +13,7 @@
     "dotenv": "^10.0.0",
     "esm": "^3.2.25",
     "recursive-copy": "^2.0.11",
-    "simple-git": "^2.37.0"
+    "simple-git": "^3.21.0"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^8.1.1",

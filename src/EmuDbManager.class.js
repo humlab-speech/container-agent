@@ -68,8 +68,9 @@ class EmuDbManager {
                 Gender: session.speakerGender,
                 Age: session.speakerAge
             }
-
-            let sessionMachineName = session.name.replace(/ /, "_");
+            
+            let sessionMachineName = session.name.replace(/ /g, "_");
+            sessionMachineName = sessionMachineName.toLowerCase();
             let sessionDirectoryPath = process.env.PROJECT_PATH+"/Data/"+this.emuDbPrefix+"_emuDB/"+sessionMachineName+"_ses";
             
             //It is possible that the session directory doesn not exist at this point if the user created a new session without any audio files (and only metadata), sort of a weird thing to do, but who am I to judge, so just create the session directory
