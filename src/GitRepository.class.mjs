@@ -1,8 +1,8 @@
-const { exec } = require("child_process");
-const simpleGit = require('simple-git')
-const ApiResponse = require('./ApiResponse.class.js');
+import { exec } from "child_process";
+import simpleGit from "simple-git";
+import ApiResponse from "./ApiResponse.class.mjs";
 
-class GitRepository {
+export default class GitRepository {
     constructor(repoPath, gitUserName, gitUserEmail) {
         this.git = new simpleGit();
         this.repoPath = repoPath;
@@ -158,5 +158,3 @@ class GitRepository {
         return new ApiResponse(500, 'Unknown error');
     }
 }
-
-module.exports = GitRepository
