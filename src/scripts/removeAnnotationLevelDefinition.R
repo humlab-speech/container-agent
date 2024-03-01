@@ -1,0 +1,5 @@
+library(emuR, warn.conflicts = FALSE)
+library(reindeer)
+dbPath = file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
+VISPDB = load_emuDB(dbPath)
+remove_levelDefinition(VISPDB, name = Sys.getenv("ANNOT_LEVEL_DEF_NAME"))

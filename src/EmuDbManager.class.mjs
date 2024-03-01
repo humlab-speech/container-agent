@@ -139,7 +139,7 @@ export default class EmuDbManager {
         });
     }
 
-    async createAnnotationLevels() {
+    async createAnnotationLevel() {
         return new Promise((resolve, reject) => {
             exec("R -s -f "+this.scriptPath+"/addAnnotationLevelDefinition.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
@@ -147,9 +147,25 @@ export default class EmuDbManager {
         });
     }
 
-    async createAnnotationLevelLinks() {
+    async removeAnnotationLevel() {
+        return new Promise((resolve, reject) => {
+            exec("R -s -f "+this.scriptPath+"/removeAnnotationLevelDefinition.R", (error, stdout, stderr) => {
+                resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
+            });
+        });
+    }
+
+    async createAnnotationLevelLink() {
         return new Promise((resolve, reject) => {
             exec("R -s -f "+this.scriptPath+"/addAnnotationLevelLinkDefinition.R", (error, stdout, stderr) => {
+                resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
+            });
+        });
+    }
+
+    async removeAnnotationLevelLink() {
+        return new Promise((resolve, reject) => {
+            exec("R -s -f "+this.scriptPath+"/removeAnnotationLevelLinkDefinition.R", (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -291,6 +307,17 @@ export default class EmuDbManager {
             encoding: 'utf-8'
         });
         return JSON.parse(rawJson);
+    }
+
+    async getEmuDbConfigAsApiResponse(projectPath = "./") {
+        return new Promise(async (resolve, reject) => {
+            this.getEmuDbConfig(projectPath).then((dbConfig) => {
+                if(dbConfig.error) {
+                    reject(new ApiResponse(500, dbConfig.error));
+                }
+                resolve(new ApiResponse(200, dbConfig));
+            });
+        });
     }
 
     async writeEmuDbConfig(dbConfig, projectPath = "./") {

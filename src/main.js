@@ -111,21 +111,21 @@ async function simulateProjectCreation(emudbMan) {
     //emudb-create-bundlelist
     console.log("\ncreateBundleList");
     await emudbMan.createBundleList().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
-    //emudb-create-annotlevels
+    //emudb-create-annotlevel
     process.env['ANNOT_LEVEL_DEF_NAME'] = "Word";
     process.env['ANNOT_LEVEL_DEF_TYPE'] = "ITEM";
-    console.log("\ncreateAnnotationLevels");
-    await emudbMan.createAnnotationLevels().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+    console.log("\ncreateAnnotationLevel");
+    await emudbMan.createAnnotationLevel().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
     process.env['ANNOT_LEVEL_DEF_NAME'] = "Phonetic";
     process.env['ANNOT_LEVEL_DEF_TYPE'] = "SEGMENT";
-    console.log("\ncreateAnnotationLevels");
-    await emudbMan.createAnnotationLevels().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
-    //emudb-create-annotlevellinks
+    console.log("\ncreateAnnotationLevel");
+    await emudbMan.createAnnotationLevel().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+    //emudb-create-annotlevellink
     process.env['ANNOT_LEVEL_LINK_SUPER'] = "Word";
     process.env['ANNOT_LEVEL_LINK_SUB'] = "Phonetic";
     process.env['ANNOT_LEVEL_LINK_DEF_TYPE'] = "ONE_TO_MANY";
-    console.log("\ncreateAnnotationLevelLinks");
-    await emudbMan.createAnnotationLevelLinks().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+    console.log("\ncreateAnnotationLevelLink");
+    await emudbMan.createAnnotationLevelLink().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
     
     //emudb-add-default-perspectives - perhaps this should exec BEFORE setLevelCanvasesOrder?
     console.log("\naddDefaultPerspectives");
@@ -210,6 +210,9 @@ else {
         case "full-recursive-copy":
             fullRecursiveCopy(args[0], args[1]).then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
             break;
+        case "emudb-read-dbconfig":
+            emudbMan.getEmuDbConfigAsApiResponse().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
+            break;
         case "emudb-create":
             emudbMan.create().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
@@ -222,11 +225,11 @@ else {
         case "emudb-update-bundle-lists":
             emudbMan.updateBundleLists().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
             break;
-        case "emudb-create-annotlevels":
-            emudbMan.createAnnotationLevels().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+        case "emudb-create-annotlevel":
+            emudbMan.createAnnotationLevel().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
-        case "emudb-create-annotlevellinks":
-            emudbMan.createAnnotationLevelLinks().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
+        case "emudb-create-annotlevellink":
+            emudbMan.createAnnotationLevelLink().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
             break;
         case "emudb-add-default-perspectives":
             emudbMan.addDefaultPerspectives().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
