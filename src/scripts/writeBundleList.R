@@ -1,6 +1,6 @@
 library(tidyverse, warn.conflicts = FALSE)
 library(emuR, warn.conflicts = FALSE)
-library(reindeer)
+#library(reindeer)
 library(jsonlite, warn.conflicts = FALSE)
 dbPath = file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
 VISPDB = load_emuDB(dbPath)

@@ -1,5 +1,5 @@
 library(emuR, warn.conflicts = FALSE)
-library(reindeer)
+#library(reindeer)
 library(jsonlite)
 library(base64enc)
 dbPath = file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
