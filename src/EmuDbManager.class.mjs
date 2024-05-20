@@ -76,15 +76,14 @@ export default class EmuDbManager {
                 Age: session.speakerAge
             }
             
-            let sessionMachineName = session.name.replace(/ /g, "_");
-            let sessionDirectoryPath = process.env.PROJECT_PATH+"/Data/"+this.emuDbPrefix+"_emuDB/"+sessionMachineName+"_ses";
+            let sessionDirectoryPath = process.env.PROJECT_PATH+"/Data/"+this.emuDbPrefix+"_emuDB/"+session.name+"_ses";
             
             //It is possible that the session directory doesn not exist at this point if the user created a new session without any audio files (and only metadata), sort of a weird thing to do, but who am I to judge, so just create the session directory
             if(!fs.existsSync(sessionDirectoryPath)) {
                 fs.mkdirSync(sessionDirectoryPath);
             }
             
-            let filePath = sessionDirectoryPath+"/"+sessionMachineName+".meta_json";
+            let filePath = sessionDirectoryPath+"/"+session.name+".meta_json";
             fs.writeFileSync(filePath, JSON.stringify(sessionMeta));
         }
     }
