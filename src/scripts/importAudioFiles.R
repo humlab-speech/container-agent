@@ -27,5 +27,6 @@ for(i in 1:nrow(sessions)) {
 
   print(paste("Importing session", sessionName, "using audio files from", wavDir))
 
-  import_recordings(VISPDB, dir = wavDir, targetSessionName = sessionName, verbose = FALSE)
+  #import_recordings(VISPDB, dir = wavDir, targetSessionName = sessionName, verbose = FALSE)
+  import_mediaFiles(VISPDB, dir = wavDir, targetSessionName = sessionName, verbose = FALSE)
 }
