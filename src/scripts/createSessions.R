@@ -37,7 +37,8 @@ for(i in 1:nrow(sessions)) {
 
   if (dir.exists(wavDir) && length(list.files(wavDir)) > 0) {
     print(paste("Importing session", sessionSlug, "using audio files from", wavDir))
-    import_recordings(VISPDB, dir = wavDir, targetSessionName = sessionSlug, verbose = FALSE)
+    #import_recordings(VISPDB, dir = wavDir, targetSessionName = sessionSlug, verbose = FALSE)
+    import_mediaFiles(VISPDB, dir = wavDir, targetSessionName = sessionName, verbose = FALSE)
   } else {
     print(paste("No audio files found in", wavDir, "- skipping import for session", sessionSlug))
   }
