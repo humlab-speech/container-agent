@@ -16,7 +16,6 @@ for(i in 1:nrow(sessions)) {
   deletedSession = ifelse("deleted" %in% colnames(sessions), sessions[i, "deleted"], FALSE)
   sessionId = sessions[i, "id"]
   sessionName = sessions[i, "name"]
-  sessionSlug = sessions[i, "slug"]
   speakerGender = sessions[i, "speakerGender"]
   speakerAge = sessions[i, "speakerAge"]
   files = sessions[i, "files"]
@@ -33,13 +32,13 @@ for(i in 1:nrow(sessions)) {
     wavDir = file.path(Sys.getenv("UPLOAD_PATH"), "emudb-sessions", sessionId)
   }
 
-  print(paste("Importing session", sessionSlug, "using audio files from", wavDir))
+  print(paste("Importing session", sessionName, "using audio files from", wavDir))
 
   if (dir.exists(wavDir) && length(list.files(wavDir)) > 0) {
-    print(paste("Importing session", sessionSlug, "using audio files from", wavDir))
-    #import_recordings(VISPDB, dir = wavDir, targetSessionName = sessionSlug, verbose = FALSE)
+    print(paste("Importing session", sessionName, "using audio files from", wavDir))
+    #import_recordings(VISPDB, dir = wavDir, targetSessionName = sessionName, verbose = FALSE)
     import_mediaFiles(VISPDB, dir = wavDir, targetSessionName = sessionName, verbose = FALSE)
   } else {
-    print(paste("No audio files found in", wavDir, "- skipping import for session", sessionSlug))
+    print(paste("No audio files found in", wavDir, "- skipping import for session", sessionName))
   }
 }
