@@ -80,7 +80,9 @@ export default class EmuDbManager {
             
             //It is possible that the session directory doesn not exist at this point if the user created a new session without any audio files (and only metadata), sort of a weird thing to do, but who am I to judge, so just create the session directory
             if(!fs.existsSync(sessionDirectoryPath)) {
-                fs.mkdirSync(sessionDirectoryPath);
+                fs.mkdirSync(sessionDirectoryPath, {
+                    recursive: true
+                });
             }
             
             let filePath = sessionDirectoryPath+"/"+session.name+".meta_json";
