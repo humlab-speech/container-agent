@@ -1,19 +1,3 @@
-#library(emuR, warn.conflicts = FALSE)
-#library(reindeer)
-#dbPath = file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
-#VISPDB = load_emuDB(dbPath)
-
-#list_ssffTrackDefinitions(VISPDB)
-
-#add_ssffTrackDefinition(VISPDB, name = "FORMANTS", onTheFlyFunctionName = "forest")
-#add_ssffTrackDefinition(VISPDB, name = "F0", onTheFlyFunctionName = "ksvF0")
-
-#remove_ssffTrackDefinition(VISPDB, name = "FORMANTS", deleteFiles = FALSE)
-#remove_ssffTrackDefinition(VISPDB, name = "F0", deleteFiles = FALSE)
-
-
-
-
 library(emuR, warn.conflicts = FALSE)
 library(jsonlite)
 #library(reindeer)
@@ -22,7 +6,7 @@ dbPath <- file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
 VISPDB <- load_emuDB(dbPath)
 
 #First check that we have ssffTrackDefinitions in the VISP_DBconfig.json file
-VISP_DBconfig <- fromJSON(file.path(dbPath, "VISP_DBconfig.json")
+VISP_DBconfig <- fromJSON(file.path(dbPath, "VISP_DBconfig.json"))
 
 # check for any items at all in VISP_DBconfig$ssffTrackDefinitions
 if (length(VISP_DBconfig$ssffTrackDefinitions) == 0) {
