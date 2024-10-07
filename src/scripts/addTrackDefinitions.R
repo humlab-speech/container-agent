@@ -1,17 +1,8 @@
 library(emuR, warn.conflicts = FALSE)
-library(jsonlite)
 #library(reindeer)
 
 dbPath <- file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
 VISPDB <- load_emuDB(dbPath)
-
-#First check that we have ssffTrackDefinitions in the VISP_DBconfig.json file
-VISP_DBconfig <- fromJSON(file.path(dbPath, "VISP_DBconfig.json"))
-
-# check for any items at all in VISP_DBconfig$ssffTrackDefinitions
-if (length(VISP_DBconfig$ssffTrackDefinitions) == 0) {
-  stop("No ssffTrackDefinitions found in VISP_DBconfig.json. Aborting.")
-}
 
 # List existing tracks
 existing_tracks <- list_ssffTrackDefinitions(VISPDB)
