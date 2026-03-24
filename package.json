@@ -16,7 +16,7 @@
     "esm": "^3.2.25",
     "nanoid": "^4.0.0",
     "recursive-copy": "^2.0.11",
-    "simple-git": "^3.21.0"
+    "simple-git": "^3.33.0"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^8.1.1",
