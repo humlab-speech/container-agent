@@ -4,6 +4,15 @@ library(jsonlite)
 library(base64enc)
 
 dbPath = file.path(Sys.getenv("PROJECT_PATH"), "Data", "VISP_emuDB")
+
+# Delete the SQLite cache before loading to prevent UNIQUE constraint failures
+# when emuR tries to update an existing cache (emuR cache updates are not idempotent)
+cacheFile = file.path(dbPath, "VISP_emuDBcache.sqlite")
+if (file.exists(cacheFile)) {
+  print("Removing stale emuDB cache before import")
+  file.remove(cacheFile)
+}
+
 VISPDB = load_emuDB(dbPath)
 
 #decode envvar EMUDB_SESSIONS, it's a base64-encoded json-string
