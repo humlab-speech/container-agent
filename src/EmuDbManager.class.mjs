@@ -175,7 +175,7 @@ export default class EmuDbManager {
         return new Promise((resolve, reject) => {
             exec("R -s -f "+this.scriptPath+"/addDefaultPerspectives.R", (error, stdout, stderr) => {
                 //Edit the VISP_DBconfig.json to add perspective => signalCanvases spec
-                const PROJECT_PATH = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : "/home/rstudio/project";
+                const PROJECT_PATH = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : "/home/jovyan/project";
                 this.getEmuDbConfig(PROJECT_PATH).then(dbConfig => {
                     if(!dbConfig.EMUwebAppConfig.perspectives) {
                         reject(new ApiResponse(500, "dbConfig.EMUwebAppConfig.perspectives was not defined"));
@@ -260,7 +260,7 @@ export default class EmuDbManager {
     }
 
     async scan() {
-        const PROJECT_PATH = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : "/home/rstudio/project";
+        const PROJECT_PATH = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : "/home/jovyan/project";
 
         return await Promise.all([
             this.getEmuDbConfig(PROJECT_PATH),
