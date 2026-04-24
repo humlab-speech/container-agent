@@ -74,6 +74,13 @@ export default class EmuDbManager {
                 SessionId: session.sessionId ? session.sessionId : nanoid(),
                 Gender: session.speakerGender,
                 Age: session.speakerAge
+            };
+
+            if (session.timeOfRecording) {
+                sessionMeta.TimeOfRecording = String(session.timeOfRecording);
+            }
+            if (session.placeOfRecording) {
+                sessionMeta.PlaceOfRecording = String(session.placeOfRecording);
             }
             
             let sessionDirectoryPath = process.env.PROJECT_PATH+"/Data/"+this.emuDbPrefix+"_emuDB/"+session.name+"_ses";
@@ -85,7 +92,7 @@ export default class EmuDbManager {
                 });
             }
             
-            let filePath = sessionDirectoryPath+"/"+session.name+".meta_json";
+            let filePath = sessionDirectoryPath+"/"+session.name+".json";
             fs.writeFileSync(filePath, JSON.stringify(sessionMeta));
         }
     }

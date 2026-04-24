@@ -245,7 +245,7 @@ export default class ContainerAgent {
             //scan the directory
             let bundleNames = fs.readdirSync(process.env.PROJECT_PATH+"/Data/VISP_emuDB/"+session.name+"_ses");
             //filter out the metadata file
-            bundleNames = bundleNames.filter(bundleName => bundleName != session.name+".meta_json");
+            bundleNames = bundleNames.filter(bundleName => bundleName != session.name+".json");
             //delete the bundles
             bundleNames.forEach(bundleName => {
                 let path = process.env.PROJECT_PATH+"/Data/VISP_emuDB/"+session.name+"_ses/"+bundleName;
