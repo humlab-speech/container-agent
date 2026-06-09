@@ -165,42 +165,42 @@ export default class ContainerAgent {
                 case 'checkout':
                     repo.checkoutBranch().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
                     break;
-                case 'save': //Save is just a shorthand for chown+pull+add+commit+push
-                    this.chownDirectory(repo.repoPath, "root:root").then(ar => {
+                case 'save': //Save is just a shorthand for pull+add+commit+push
+                    // No ownership juggling: under rootless --userns=keep-id the
+                    // bind-mounted repository is already owned by this container's
+                    // service user (jovyan), which is the single host repo owner that
+                    // session-manager, emu-webapp-server, wsrng-server and apache all
+                    // map to. git therefore runs as the repo's owner with no dubious-
+                    // ownership issue. The previous chown-to-root / chown-back dance is
+                    // intentionally removed: chowning to container root under keep-id
+                    // would remap the whole tree to a host sub-UID and corrupt the
+                    // shared ownership every other service relies on.
+                    //Try to pull in any changes
+                    repo.pull().then((ar) => {
                         if(ar.code != 200) {
-                            //If last operation caused an error, abort and return 
+                            //If last operation caused an error, abort and return
                             console.log(ar.toJSON());
                             return;
                         }
-                        //Try to pull in any changes
-                        repo.pull().then((ar) => {
+                        repo.add().then((ar) => {
                             if(ar.code != 200) {
-                                //If last operation caused an error, abort and return 
+                                //If last operation caused an error, abort and return
                                 console.log(ar.toJSON());
                                 return;
                             }
-                            repo.add().then((ar) => {
+                            repo.commit().then((ar) => {
                                 if(ar.code != 200) {
-                                    //If last operation caused an error, abort and return 
+                                    //If last operation caused an error, abort and return
                                     console.log(ar.toJSON());
                                     return;
                                 }
-                                repo.commit().then((ar) => {
-                                    if(ar.code != 200) {
-                                        //If last operation caused an error, abort and return 
-                                        console.log(ar.toJSON());
-                                        return;
-                                    }
-                                    repo.push().then(ar => {
-                                        //Reset directory owner to 'main' container user
-                                        this.chownDirectory(repo.repoPath, "1000:1000"); //this will cause a problem if we at some point in the future have containers beyond rstudio and jupyter which 'main' user is not uid 1000
-                                        console.log(ar.toJSON())
-                                    });
+                                repo.push().then(ar => {
+                                    console.log(ar.toJSON())
                                 });
                             });
                         });
                     })
-                    
+
                     break;
             }
         }
