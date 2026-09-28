@@ -206,13 +206,22 @@ export default class ContainerAgent {
         }
     }
 
+    // Copies documents uploaded in the project dialog into the project's Documents folder
     copyDocs() {
-        return copy('/home/uploads/docs', '/home/project-setup/Documents')
+        if(!process.env.PROJECT_PATH) {
+            return Promise.resolve(new ApiResponse(500, 'PROJECT_PATH is not set'));
+        }
+        const srcDir = (process.env.UPLOAD_PATH || '/home/uploads') + '/docs';
+        if(!fs.existsSync(srcDir)) {
+            return Promise.resolve(new ApiResponse(200, 'No documents to copy'));
+        }
+        // A re-upload replaces the document; the previous version stays in the project's git history
+        return copy(srcDir, process.env.PROJECT_PATH + '/Documents', { overwrite: true })
         .then(function(results) {
             return new ApiResponse(200, 'Copied ' + results.length + ' files');
         })
         .catch(function(error) {
-            return new ApiResponse(400, 'Copy failed' + error);
+            return new ApiResponse(500, 'Copy failed: ' + error);
         });
     }
     
