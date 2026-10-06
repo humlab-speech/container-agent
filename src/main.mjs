@@ -296,6 +296,19 @@ export default class ContainerAgent {
                 if(fs.existsSync(destDir + '/' + rel)) copied++;
                 else console.error('copy-docs: WARN entry not copied (silently skipped, e.g. dot-prefixed unsafe name): ' + rel);
             });
+            // An allow-list is a promise, not a hint: every document the form kept must
+            // end up in Documents/. Answering 200 while one of them arrived nowhere let the
+            // caller commit and then delete the only remaining copy (it removes the upload
+            // directory on success), which is how a document disappears without a trace. A
+            // name already in Documents - unchanged since an earlier save - is satisfied and
+            // asks for nothing.
+            const missing = allow
+                ? [...allow].filter((name) => !fs.existsSync(destDir + "/" + name))
+                : [];
+            if (missing.length) {
+                console.error('copy-docs: refused, these documents did not reach ' + destDir + ': ' + missing.join(', '));
+                return new ApiResponse(500, 'Documents were not stored: ' + missing.join(', ') + '. Rename them (the name may be unsafe) and save again.');
+            }
             return new ApiResponse(200, 'Copied ' + copied + ' files');
         })
         .catch(function(error) {
