@@ -88,6 +88,7 @@ the container:
 | `DOC_FILES` | `copy-docs` — **plain JSON** document allow-list |
 | `WRITE_META_JSON` | `emudb-create-sessions` — toggles meta.json rewrite |
 | `UPLOAD_PATH` | Session import — path to uploaded audio; `UPLOAD_PATH/docs` is the copy-docs source |
+| `CONTAINER_AGENT_TEST` | Development only — when `true`, reads a local `.env` via dotenv and points the R scripts and uploads at `src/scripts/` and `./uploads` instead of the in-container paths (`/container-agent/scripts`, the real `UPLOAD_PATH`); used by the local `simulate` command and the unit tests. Never set it in the deployment |
 
 Set `GIT_SSL_NO_VERIFY=true` if the GitLab instance uses a self-signed certificate.
 
