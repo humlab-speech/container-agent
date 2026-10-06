@@ -236,6 +236,23 @@ export default class ContainerAgent {
             copyOptions.filter = function(relPath) {
                 return allow.has(relPath.split(/[\\/]/)[0]);
             };
+            // A same-name re-upload must replace the committed document: without overwrite:true
+            // recursive-copy dies with EEXIST on an existing dest file, so every update would
+            // 400 and silently keep the old version. Delete the stale dest FILE first. unlink is
+            // non-recursive and never force, so a same-named dest DIRECTORY throws EISDIR and is
+            // left alone (the following non-overwrite copy then fails tolerably with 400, as in
+            // FLAW-3), and a missing target is ENOENT = plain new copy.
+            const destDir = process.env.PROJECT_PATH + '/Documents';
+            allow.forEach(name => {
+                const target = destDir + '/' + String(name).split(/[\\/]/)[0];
+                try {
+                    fs.unlinkSync(target);
+                } catch(error) {
+                    if(error.code != 'ENOENT' && error.code != 'EISDIR') {
+                        console.error('copy-docs: could not replace ' + target + ': ' + error);
+                    }
+                }
+            });
         }
         return copy(srcDir, process.env.PROJECT_PATH + '/Documents', copyOptions)
         .then(function(results) {
