@@ -215,11 +215,14 @@ export default class ContainerAgent {
         if(!fs.existsSync(srcDir)) {
             return Promise.resolve(new ApiResponse(200, 'No documents to copy'));
         }
-        // A re-upload replaces the document; the previous version stays in the project's git history
+        // No overwrite option: with overwrite:true recursive-copy rimrafs any existing
+        // dest entry when a source file collides with a same-named dest directory,
+        // silently deleting whole folders from the user's git-tracked repo. Same-name
+        // re-uploads are already collapsed into one file by the PHP upload handler.
         // DOC_FILES (optional): authoritative list of documents the user actually kept in
         // the form. The upload dir can also contain orphans - files removed in the UI are
         // never deleted server-side - so when the list is given, copy only those files.
-        let copyOptions = { overwrite: true };
+        let copyOptions = {};
         if(process.env.DOC_FILES) {
             let allow;
             try {
