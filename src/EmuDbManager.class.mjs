@@ -111,6 +111,13 @@ export default class EmuDbManager {
         let projectPath = process.env.PROJECT_PATH;
 
         let path = projectPath+"/Data/VISP_emuDB/bundleLists";
+        //BUNDLE_LISTS originates from client-supplied websocket data (session-manager
+        //forwards msg.data verbatim), so validate the one field that becomes a path.
+        for(let user of bundleLists) {
+            if(!user || typeof user.username != "string" || /[/\\\0]/.test(user.username) || user.username.includes("..")) {
+                return Promise.resolve(new ApiResponse(400, 'Invalid username in bundle list'));
+            }
+        }
         //check that the 'bundleLists' directory exists first - which may not always be the case
         await this.mkdir(path);
 
