@@ -249,15 +249,19 @@ export default class ContainerAgent {
         // ponytail: a copy that fails after the replace loses that one committed file (the
         // uploads dir survives, so it is recoverable by retry); copy-to-temp + renameSync in
         // the same directory is the upgrade if that ever bites.
-        let replace = [];
+        let uploaded = [];
         try {
-            replace = fs.readdirSync(srcDir, { withFileTypes: true })
+            uploaded = fs.readdirSync(srcDir, { withFileTypes: true })
                 .filter(entry => entry.isFile() && !entry.name.startsWith('.'))
-                .map(entry => entry.name)
-                .filter(name => !allow || allow.has(name));
+                .map(entry => entry.name);
         } catch(error) {
             console.error('copy-docs: cannot list ' + srcDir + ', no committed file will be replaced: ' + error);
         }
+        if(allow) {
+            const names = new Set(uploaded);
+            allow.forEach(name => { if(!names.has(name)) console.error('copy-docs: WARN allow-listed document is not in the upload dir (skipped): ' + JSON.stringify(name)); });
+        }
+        const replace = uploaded.filter(name => !allow || allow.has(name));
         replace.forEach(name => {
             try {
                 fs.unlinkSync(destDir + '/' + name);

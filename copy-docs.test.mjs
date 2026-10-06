@@ -76,6 +76,7 @@ test("allow-list entry with no upload leaves the committed document alone", () =
         env: { ...process.env, PROJECT_PATH: proj, UPLOAD_PATH: path.join(root, "uploads"), DOC_FILES: '["mine.txt","victim.txt"]' },
     });
     assert.equal(JSON.parse(r.stdout.trim()).body, "Copied 1 files");
+    assert.match(r.stderr, /WARN.*victim\.txt/); // the mismatch must be visible, not a silent skip
     assert.ok(fs.existsSync(path.join(proj, "Documents", "victim.txt")), "committed Documents/victim.txt was deleted");
 });
 
