@@ -9,16 +9,23 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-function runCopyDocs(files) {
+// files: names written into the upload dir (content = the name itself).
+// options.docFiles: value sent as DOC_FILES (defaults to files).
+// options.extra: root-relative paths (e.g. "proj/Documents/x" or "uploads/docs/x")
+//   mapped to content, written before the run - for committed documents and
+//   stray files that are not part of this save's uploads.
+function runCopyDocs(files, options = {}) {
+    const { docFiles = files, extra = {} } = options;
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "copy-docs-"));
     const src = path.join(root, "uploads", "docs");
     const proj = path.join(root, "proj");
     fs.mkdirSync(src, { recursive: true });
     fs.mkdirSync(path.join(proj, "Documents"), { recursive: true });
     for (const f of files) fs.writeFileSync(path.join(src, f), f);
+    for (const [rel, content] of Object.entries(extra)) fs.writeFileSync(path.join(root, rel), content);
     const r = spawnSync(process.execPath, [new URL("src/main.mjs", import.meta.url).pathname, "copy-docs"], {
         encoding: "utf8",
-        env: { ...process.env, PROJECT_PATH: proj, UPLOAD_PATH: path.join(root, "uploads"), DOC_FILES: JSON.stringify(files) },
+        env: { ...process.env, PROJECT_PATH: proj, UPLOAD_PATH: path.join(root, "uploads"), DOC_FILES: JSON.stringify(docFiles) },
     });
     return { res: JSON.parse(r.stdout.trim()), stderr: r.stderr, proj };
 }
@@ -45,21 +52,14 @@ test("dot-prefixed unsafe name refuses the save instead of losing the document",
 });
 
 test("non-listed orphans are not copied and not warned", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "copy-docs-"));
-    const src = path.join(root, "uploads", "docs");
-    const proj = path.join(root, "proj");
-    fs.mkdirSync(src, { recursive: true });
-    fs.mkdirSync(path.join(proj, "Documents"), { recursive: true });
-    fs.writeFileSync(path.join(src, "kept.txt"), "k");
-    fs.writeFileSync(path.join(src, "orphan.txt"), "o");
-    const r = spawnSync(process.execPath, [new URL("src/main.mjs", import.meta.url).pathname, "copy-docs"], {
-        encoding: "utf8",
-        env: { ...process.env, PROJECT_PATH: proj, UPLOAD_PATH: path.join(root, "uploads"), DOC_FILES: '["kept.txt"]' },
+    const { res, stderr, proj } = runCopyDocs([], {
+        docFiles: ["kept.txt"],
+        extra: { "uploads/docs/kept.txt": "k", "uploads/docs/orphan.txt": "o" },
     });
-    assert.equal(JSON.parse(r.stdout.trim()).body, "Copied 1 files");
+    assert.equal(res.body, "Copied 1 files");
     assert.ok(fs.existsSync(path.join(proj, "Documents", "kept.txt")));
     assert.ok(!fs.existsSync(path.join(proj, "Documents", "orphan.txt")));
-    assert.ok(!r.stderr.includes("WARN")); // orphans are the designed silent case, no noise
+    assert.ok(!stderr.includes("WARN")); // orphans are the designed silent case, no noise
 });
 
 // Regression: the replace-before-copy step must only ever touch a committed document that
@@ -68,36 +68,22 @@ test("non-listed orphans are not copied and not warned", () => {
 // "Copied 1 files" (the count walks src and never notices), and session-manager then
 // committed the deletion and removed the uploads dir.
 test("allow-list entry with no upload leaves the committed document alone", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "copy-docs-"));
-    const src = path.join(root, "uploads", "docs");
-    const proj = path.join(root, "proj");
-    fs.mkdirSync(src, { recursive: true });
-    fs.mkdirSync(path.join(proj, "Documents"), { recursive: true });
-    fs.writeFileSync(path.join(src, "mine.txt"), "m");
-    fs.writeFileSync(path.join(proj, "Documents", "victim.txt"), "committed by someone else");
-    const r = spawnSync(process.execPath, [new URL("src/main.mjs", import.meta.url).pathname, "copy-docs"], {
-        encoding: "utf8",
-        env: { ...process.env, PROJECT_PATH: proj, UPLOAD_PATH: path.join(root, "uploads"), DOC_FILES: '["mine.txt","victim.txt"]' },
+    const { res, stderr, proj } = runCopyDocs(["mine.txt"], {
+        docFiles: ["mine.txt", "victim.txt"],
+        extra: { "proj/Documents/victim.txt": "committed by someone else" },
     });
-    assert.equal(JSON.parse(r.stdout.trim()).body, "Copied 1 files");
-    assert.match(r.stderr, /WARN.*victim\.txt/); // the mismatch must be visible, not a silent skip
+    assert.equal(res.body, "Copied 1 files");
+    assert.match(stderr, /WARN.*victim\.txt/); // the mismatch must be visible, not a silent skip
     assert.ok(fs.existsSync(path.join(proj, "Documents", "victim.txt")), "committed Documents/victim.txt was deleted");
 });
 
 // The other direction: replacing a same-name re-upload is the reason the replace step exists.
 test("same-name re-upload replaces the committed document", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "copy-docs-"));
-    const src = path.join(root, "uploads", "docs");
-    const proj = path.join(root, "proj");
-    fs.mkdirSync(src, { recursive: true });
-    fs.mkdirSync(path.join(proj, "Documents"), { recursive: true });
-    fs.writeFileSync(path.join(src, "doc.txt"), "NEW");
-    fs.writeFileSync(path.join(proj, "Documents", "doc.txt"), "OLD");
-    const r = spawnSync(process.execPath, [new URL("src/main.mjs", import.meta.url).pathname, "copy-docs"], {
-        encoding: "utf8",
-        env: { ...process.env, PROJECT_PATH: proj, UPLOAD_PATH: path.join(root, "uploads"), DOC_FILES: '["doc.txt"]' },
+    const { res, proj } = runCopyDocs([], {
+        docFiles: ["doc.txt"],
+        extra: { "uploads/docs/doc.txt": "NEW", "proj/Documents/doc.txt": "OLD" },
     });
-    assert.equal(JSON.parse(r.stdout.trim()).body, "Copied 1 files");
+    assert.equal(res.body, "Copied 1 files");
     assert.equal(fs.readFileSync(path.join(proj, "Documents", "doc.txt"), "utf8"), "NEW");
 });
 
@@ -105,17 +91,10 @@ test("same-name re-upload replaces the committed document", () => {
 // the upload actually saved on disk (api.php sanitizes, the form does not). Nothing arrives,
 // and a 200 here means the caller commits and deletes the only copy of the document.
 test("a kept document that reaches nowhere refuses the save", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "copy-docs-"));
-    const src = path.join(root, "uploads", "docs");
-    const proj = path.join(root, "proj");
-    fs.mkdirSync(src, { recursive: true });
-    fs.mkdirSync(path.join(proj, "Documents"), { recursive: true });
-    fs.writeFileSync(path.join(src, "consent report.pdf"), "pdf");
-    const r = spawnSync(process.execPath, [new URL("src/main.mjs", import.meta.url).pathname, "copy-docs"], {
-        encoding: "utf8",
-        env: { ...process.env, PROJECT_PATH: proj, UPLOAD_PATH: path.join(root, "uploads"), DOC_FILES: '["consent_report.pdf"]' },
+    const { res, proj } = runCopyDocs([], {
+        docFiles: ["consent_report.pdf"],
+        extra: { "uploads/docs/consent report.pdf": "pdf" },
     });
-    const res = JSON.parse(r.stdout.trim());
     assert.equal(res.code, 500);
     assert.match(res.body, /consent_report\.pdf/);
     assert.ok(!fs.existsSync(path.join(proj, "Documents", "consent_report.pdf")));
@@ -123,18 +102,10 @@ test("a kept document that reaches nowhere refuses the save", () => {
 
 // Keeping no documents at all is a legitimate save (the user removed them all in the form).
 test("an empty allow-list is a successful save", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "copy-docs-"));
-    const src = path.join(root, "uploads", "docs");
-    const proj = path.join(root, "proj");
-    fs.mkdirSync(src, { recursive: true });
-    fs.mkdirSync(path.join(proj, "Documents"), { recursive: true });
-    fs.writeFileSync(path.join(src, "orphan.txt"), "removed in the UI");
-    fs.writeFileSync(path.join(proj, "Documents", "earlier.txt"), "committed before");
-    const r = spawnSync(process.execPath, [new URL("src/main.mjs", import.meta.url).pathname, "copy-docs"], {
-        encoding: "utf8",
-        env: { ...process.env, PROJECT_PATH: proj, UPLOAD_PATH: path.join(root, "uploads"), DOC_FILES: "[]" },
+    const { res, proj } = runCopyDocs([], {
+        docFiles: [],
+        extra: { "uploads/docs/orphan.txt": "removed in the UI", "proj/Documents/earlier.txt": "committed before" },
     });
-    const res = JSON.parse(r.stdout.trim());
     assert.equal(res.code, 200);
     assert.equal(res.body, "Copied 0 files");
     assert.ok(!fs.existsSync(path.join(proj, "Documents", "orphan.txt")));
@@ -146,21 +117,10 @@ test("an empty allow-list is a successful save", () => {
 // filesystem with a path the caller chose, and a hit reported the traversal as a
 // delivered document - suppressing the refusal that is supposed to catch exactly this.
 test("a traversal name in the allow-list is refused, never probed for", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "copy-docs-"));
-    const proj = path.join(root, "proj");
-    fs.mkdirSync(path.join(proj, "Documents"), { recursive: true });
-    fs.mkdirSync(path.join(root, "uploads", "docs"), { recursive: true });
-    fs.writeFileSync(path.join(proj, "outside.txt"), "not a document");
-    const r = spawnSync(process.execPath, [new URL("src/main.mjs", import.meta.url).pathname, "copy-docs"], {
-        encoding: "utf8",
-        env: {
-            ...process.env,
-            PROJECT_PATH: proj,
-            UPLOAD_PATH: path.join(root, "uploads"),
-            DOC_FILES: JSON.stringify(["../outside.txt"]),
-        },
+    const { res, proj } = runCopyDocs([], {
+        docFiles: ["../outside.txt"],
+        extra: { "proj/outside.txt": "not a document" },
     });
-    const res = JSON.parse(r.stdout.trim());
     assert.equal(res.code, 500, "a path the client picked is never 'delivered'");
     assert.match(res.body, /outside\.txt/);
     assert.ok(fs.existsSync(path.join(proj, "outside.txt")), "and nothing was touched");

@@ -237,6 +237,11 @@ export default class ContainerAgent {
         const destDir = process.env.PROJECT_PATH + '/Documents';
         let copyOptions = { junk: true }; // only exclusion left is 'dot-prefixed', so 'may be replaced' below can mirror 'will be placed'
         let allow = null;
+        // One rule for "this save carries this entry": match the allow-list against the
+        // first path segment of whatever relative path is being considered. rel is a
+        // recursive-copy relPath, a walk() prefix+name, or a bare readdirSync name
+        // (for which the split is a no-op). No allow-list means everything is carried.
+        const carried = (rel) => !allow || allow.has(rel.split(/[\\/]/)[0]);
         if(process.env.DOC_FILES) {
             try {
                 allow = new Set(JSON.parse(process.env.DOC_FILES).map(f => (f && f.name) ? f.name : f));
@@ -247,7 +252,7 @@ export default class ContainerAgent {
                 return Promise.resolve(new ApiResponse(500, 'Invalid DOC_FILES: ' + error));
             }
             copyOptions.filter = function(relPath) {
-                return allow.has(relPath.split(/[\\/]/)[0]);
+                return carried(relPath);
             };
         }
         // A same-name re-upload must replace the committed document: without overwrite:true
@@ -273,12 +278,15 @@ export default class ContainerAgent {
             const names = new Set(uploaded);
             allow.forEach(name => { if(!names.has(name)) console.error('copy-docs: WARN allow-listed document is not in the upload dir (skipped): ' + JSON.stringify(name)); });
         }
-        const replace = uploaded.filter(name => !allow || allow.has(name));
+        const replace = uploaded.filter(name => carried(name));
         replace.forEach(name => {
             try {
-                fs.unlinkSync(destDir + '/' + name);
+                // rmSync with force ignores ENOENT like the old unlinkSync catch did, and
+                // on a directory it throws ERR_FS_EISDIR without recursing - the committed
+                // directory survives to collide with recursive-copy, exactly as before.
+                fs.rmSync(destDir + '/' + name, { force: true });
             } catch(error) {
-                if(error.code != 'ENOENT' && error.code != 'EISDIR') {
+                if(error.code != 'EISDIR' && error.code != 'ERR_FS_EISDIR') {
                     console.error('copy-docs: could not replace ' + name + ': ' + error);
                 }
             }
@@ -305,7 +313,7 @@ export default class ContainerAgent {
             walk(srcDir, '');
             let copied = 0;
             requested
-            .filter(rel => !allow || allow.has(rel.split(/[\\/]/)[0]))
+            .filter(rel => carried(rel))
             .forEach(rel => {
                 if(fs.existsSync(destDir + '/' + rel)) copied++;
                 else console.error('copy-docs: WARN entry not copied (silently skipped, e.g. dot-prefixed unsafe name): ' + rel);
