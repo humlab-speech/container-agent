@@ -23,7 +23,7 @@ function runCopyDocs(files, options = {}) {
     fs.mkdirSync(path.join(proj, "Documents"), { recursive: true });
     for (const f of files) fs.writeFileSync(path.join(src, f), f);
     for (const [rel, content] of Object.entries(extra)) fs.writeFileSync(path.join(root, rel), content);
-    const r = spawnSync(process.execPath, [new URL("src/main.mjs", import.meta.url).pathname, "copy-docs"], {
+    const r = spawnSync(process.execPath, [new URL("../src/main.mjs", import.meta.url).pathname, "copy-docs"], {
         encoding: "utf8",
         env: { ...process.env, PROJECT_PATH: proj, UPLOAD_PATH: path.join(root, "uploads"), DOC_FILES: JSON.stringify(docFiles) },
     });
