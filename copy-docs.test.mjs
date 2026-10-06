@@ -140,3 +140,28 @@ test("an empty allow-list is a successful save", () => {
     assert.ok(!fs.existsSync(path.join(proj, "Documents", "orphan.txt")));
     assert.ok(fs.existsSync(path.join(proj, "Documents", "earlier.txt")), "committed files are untouched");
 });
+
+// The allow-list is client-supplied, so before this guard a name like "../outside.txt"
+// was joined onto Documents/ and asked existsSync() about: that probed the container's
+// filesystem with a path the caller chose, and a hit reported the traversal as a
+// delivered document - suppressing the refusal that is supposed to catch exactly this.
+test("a traversal name in the allow-list is refused, never probed for", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "copy-docs-"));
+    const proj = path.join(root, "proj");
+    fs.mkdirSync(path.join(proj, "Documents"), { recursive: true });
+    fs.mkdirSync(path.join(root, "uploads", "docs"), { recursive: true });
+    fs.writeFileSync(path.join(proj, "outside.txt"), "not a document");
+    const r = spawnSync(process.execPath, [new URL("src/main.mjs", import.meta.url).pathname, "copy-docs"], {
+        encoding: "utf8",
+        env: {
+            ...process.env,
+            PROJECT_PATH: proj,
+            UPLOAD_PATH: path.join(root, "uploads"),
+            DOC_FILES: JSON.stringify(["../outside.txt"]),
+        },
+    });
+    const res = JSON.parse(r.stdout.trim());
+    assert.equal(res.code, 500, "a path the client picked is never 'delivered'");
+    assert.match(res.body, /outside\.txt/);
+    assert.ok(fs.existsSync(path.join(proj, "outside.txt")), "and nothing was touched");
+});

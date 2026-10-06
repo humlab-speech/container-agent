@@ -20,6 +20,18 @@ import { exec } from "child_process";
  * 
 **/
 
+// Whether a name from DOC_FILES can be joined onto a directory and asked about
+// without the question itself being the vulnerability. Mirrors what api.php's
+// uploadFileName() allows through (no separator, no NUL, not dot-prefixed).
+function isPlainFileName(name) {
+    return (
+        typeof name === "string" &&
+        name.length > 0 &&
+        !name.startsWith(".") &&
+        !/[\\/\0]/.test(name)
+    );
+}
+
 export default class ContainerAgent {
     constructor() {
         if(typeof process.env.CONTAINER_AGENT_TEST == "undefined") {
@@ -279,8 +291,10 @@ export default class ContainerAgent {
             // number: walk the source, keep only allow-listed entries, and count solely
             // the files that really arrived in dest. Each requested-but-not-placed entry is
             // WARNed by name via the existing console.error channel. The allow-list itself
-            // is unchanged: unsafe dot-prefixed names are still skipped, partial success
-            // is still 200.
+            // is unchanged: unsafe dot-prefixed names are still skipped. What is NOT
+            // partial anymore is the answer: any allow-listed document that ended up
+            // nowhere refuses the save below, so "200" always means every document the
+            // form kept is in Documents/ (or was already there from an earlier save).
             const requested = [];
             const walk = (dir, prefix) => {
                 for(const entry of fs.readdirSync(dir, {withFileTypes: true})) {
@@ -303,7 +317,19 @@ export default class ContainerAgent {
             // name already in Documents - unchanged since an earlier save - is satisfied and
             // asks for nothing.
             const missing = allow
-                ? [...allow].filter((name) => !fs.existsSync(destDir + "/" + name))
+                ? [...allow].filter(
+                      (name) =>
+                          // A name that is not a plain file name can never have been
+                          // placed by the copy above (the filter matches basenames), so
+                          // probing for it would be pointless twice over: it is also an
+                          // existsSync() of a path the client chose - "/x", "../x" -
+                          // against the container's filesystem, and finding something
+                          // there would report a traversal as a delivered document.
+                          // Such a name is therefore never satisfied: the save is
+                          // refused and names it.
+                          !isPlainFileName(name) ||
+                          !fs.existsSync(destDir + "/" + name),
+                  )
                 : [];
             if (missing.length) {
                 console.error('copy-docs: refused, these documents did not reach ' + destDir + ': ' + missing.join(', '));
