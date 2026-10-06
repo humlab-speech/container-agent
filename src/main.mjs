@@ -221,7 +221,10 @@ export default class ContainerAgent {
             return new ApiResponse(200, 'Copied ' + results.length + ' files');
         })
         .catch(function(error) {
-            return new ApiResponse(500, 'Copy failed: ' + error);
+            // 400 (not 500): the session-manager create-project flow only tolerates
+            // {200, 400} from copy-docs and deletes the whole session on any other code.
+            console.error('copy-docs failed: ' + error);
+            return new ApiResponse(400, 'Copy failed: ' + error);
         });
     }
     
