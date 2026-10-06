@@ -34,7 +34,9 @@ process calls to set up and maintain EMU speech databases:
 | `emudb-scan` | Scan and report DB contents |
 | `emudb-read-dbconfig` | Return the DB config as JSON |
 
-**Git operations** — manages the per-project Git repository (backed by GitLab):
+**Git operations** — manages the per-project Git repositories on the deployment's repositories volume. Historically their
+remote was a GitLab instance (and an early EMU-webApp save path spoke GitLab's API); both integrations have since been
+removed, so "GitLab" is history here, not a running dependency — emu-webapp-server likewise no longer poses as one:
 
 | Command | Description |
 |---|---|
@@ -90,7 +92,7 @@ the container:
 | `UPLOAD_PATH` | Session import — path to uploaded audio; `UPLOAD_PATH/docs` is the copy-docs source |
 | `CONTAINER_AGENT_TEST` | Development only — when `true`, reads a local `.env` via dotenv and points the R scripts and uploads at `src/scripts/` and `./uploads` instead of the in-container paths (`/container-agent/scripts`, the real `UPLOAD_PATH`); used by the local `simulate` command and the unit tests. Never set it in the deployment |
 
-Set `GIT_SSL_NO_VERIFY=true` if the GitLab instance uses a self-signed certificate.
+Set `GIT_SSL_NO_VERIFY=true` if the git remote uses a self-signed certificate.
 
 ## How it is used in visible-speech-deployment
 
