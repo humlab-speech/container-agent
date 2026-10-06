@@ -216,7 +216,25 @@ export default class ContainerAgent {
             return Promise.resolve(new ApiResponse(200, 'No documents to copy'));
         }
         // A re-upload replaces the document; the previous version stays in the project's git history
-        return copy(srcDir, process.env.PROJECT_PATH + '/Documents', { overwrite: true })
+        // DOC_FILES (optional): authoritative list of documents the user actually kept in
+        // the form. The upload dir can also contain orphans - files removed in the UI are
+        // never deleted server-side - so when the list is given, copy only those files.
+        let copyOptions = { overwrite: true };
+        if(process.env.DOC_FILES) {
+            let allow;
+            try {
+                allow = new Set(JSON.parse(process.env.DOC_FILES).map(f => (f && f.name) ? f.name : f));
+            } catch(error) {
+                // Fail the copy instead of falling back to copying everything - that fallback
+                // is exactly the leak above. 400 keeps the create-project flow alive.
+                console.error('copy-docs: unparseable DOC_FILES: ' + error);
+                return Promise.resolve(new ApiResponse(400, 'Invalid DOC_FILES: ' + error));
+            }
+            copyOptions.filter = function(relPath) {
+                return allow.has(relPath.split(/[\\/]/)[0]);
+            };
+        }
+        return copy(srcDir, process.env.PROJECT_PATH + '/Documents', copyOptions)
         .then(function(results) {
             return new ApiResponse(200, 'Copied ' + results.length + ' files');
         })
