@@ -223,37 +223,50 @@ export default class ContainerAgent {
         // the form. The upload dir can also contain orphans - files removed in the UI are
         // never deleted server-side - so when the list is given, copy only those files.
         const destDir = process.env.PROJECT_PATH + '/Documents';
-        let copyOptions = {};
+        let copyOptions = { junk: true }; // only exclusion left is 'dot-prefixed', so 'may be replaced' below can mirror 'will be placed'
         let allow = null;
         if(process.env.DOC_FILES) {
             try {
                 allow = new Set(JSON.parse(process.env.DOC_FILES).map(f => (f && f.name) ? f.name : f));
             } catch(error) {
                 // Fail the copy instead of falling back to copying everything - that fallback
-                // is exactly the leak above. 400 keeps the create-project flow alive.
+                // is exactly the leak above. Answer 500, not 400: 400 was swallowed as 'no documents'.
                 console.error('copy-docs: unparseable DOC_FILES: ' + error);
-                return Promise.resolve(new ApiResponse(400, 'Invalid DOC_FILES: ' + error));
+                return Promise.resolve(new ApiResponse(500, 'Invalid DOC_FILES: ' + error));
             }
             copyOptions.filter = function(relPath) {
                 return allow.has(relPath.split(/[\\/]/)[0]);
             };
-            // A same-name re-upload must replace the committed document: without overwrite:true
-            // recursive-copy dies with EEXIST on an existing dest file, so every update would
-            // 400 and silently keep the old version. Delete the stale dest FILE first. unlink is
-            // non-recursive and never force, so a same-named dest DIRECTORY throws EISDIR and is
-            // left alone (the following non-overwrite copy then fails with a 400),
-            // and a missing target is ENOENT = plain new copy.
-            allow.forEach(name => {
-                const target = destDir + '/' + String(name).split(/[\\/]/)[0];
-                try {
-                    fs.unlinkSync(target);
-                } catch(error) {
-                    if(error.code != 'ENOENT' && error.code != 'EISDIR') {
-                        console.error('copy-docs: could not replace ' + target + ': ' + error);
-                    }
-                }
-            });
         }
+        // A same-name re-upload must replace the committed document: without overwrite:true
+        // recursive-copy dies with EEXIST on an existing dest file, so every update would
+        // fail and silently keep the old version. Delete the stale dest FILE first - and take
+        // the names from the SOURCE LISTING, never from DOC_FILES: an allow-list entry is
+        // client-supplied and may name a committed document this save does not carry, and
+        // unlinking that one deletes a colleague's committed file while the copy still
+        // answers 200 (the count below walks src, so it never notices). Replacing regular,
+        // non-dot-prefixed source files is exactly the set copy() will place.
+        // ponytail: a copy that fails after the replace loses that one committed file (the
+        // uploads dir survives, so it is recoverable by retry); copy-to-temp + renameSync in
+        // the same directory is the upgrade if that ever bites.
+        let replace = [];
+        try {
+            replace = fs.readdirSync(srcDir, { withFileTypes: true })
+                .filter(entry => entry.isFile() && !entry.name.startsWith('.'))
+                .map(entry => entry.name)
+                .filter(name => !allow || allow.has(name));
+        } catch(error) {
+            console.error('copy-docs: cannot list ' + srcDir + ', no committed file will be replaced: ' + error);
+        }
+        replace.forEach(name => {
+            try {
+                fs.unlinkSync(destDir + '/' + name);
+            } catch(error) {
+                if(error.code != 'ENOENT' && error.code != 'EISDIR') {
+                    console.error('copy-docs: could not replace ' + name + ': ' + error);
+                }
+            }
+        });
         return copy(srcDir, destDir, copyOptions)
         .then(function() {
             // recursive-copy's dot filter silently drops dot-prefixed names (e.g. a
@@ -282,10 +295,10 @@ export default class ContainerAgent {
             return new ApiResponse(200, 'Copied ' + copied + ' files');
         })
         .catch(function(error) {
-            // 400 (not 500): the session-manager create-project flow only tolerates
-            // {200, 400} from copy-docs and deletes the whole session on any other code.
+            // 500 (not 400): a real copy failure must ABORT the save, so the flow stops
+            // before the uploads directory is cleaned up and nothing is lost silently.
             console.error('copy-docs failed: ' + error);
-            return new ApiResponse(400, 'Copy failed: ' + error);
+            return new ApiResponse(500, 'Copy failed: ' + error);
         });
     }
     
