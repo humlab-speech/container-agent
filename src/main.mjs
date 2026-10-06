@@ -222,9 +222,10 @@ export default class ContainerAgent {
         // DOC_FILES (optional): authoritative list of documents the user actually kept in
         // the form. The upload dir can also contain orphans - files removed in the UI are
         // never deleted server-side - so when the list is given, copy only those files.
+        const destDir = process.env.PROJECT_PATH + '/Documents';
         let copyOptions = {};
+        let allow = null;
         if(process.env.DOC_FILES) {
-            let allow;
             try {
                 allow = new Set(JSON.parse(process.env.DOC_FILES).map(f => (f && f.name) ? f.name : f));
             } catch(error) {
@@ -240,9 +241,8 @@ export default class ContainerAgent {
             // recursive-copy dies with EEXIST on an existing dest file, so every update would
             // 400 and silently keep the old version. Delete the stale dest FILE first. unlink is
             // non-recursive and never force, so a same-named dest DIRECTORY throws EISDIR and is
-            // left alone (the following non-overwrite copy then fails tolerably with 400, as in
-            // FLAW-3), and a missing target is ENOENT = plain new copy.
-            const destDir = process.env.PROJECT_PATH + '/Documents';
+            // left alone (the following non-overwrite copy then fails with a 400),
+            // and a missing target is ENOENT = plain new copy.
             allow.forEach(name => {
                 const target = destDir + '/' + String(name).split(/[\\/]/)[0];
                 try {
@@ -254,9 +254,32 @@ export default class ContainerAgent {
                 }
             });
         }
-        return copy(srcDir, process.env.PROJECT_PATH + '/Documents', copyOptions)
-        .then(function(results) {
-            return new ApiResponse(200, 'Copied ' + results.length + ' files');
+        return copy(srcDir, destDir, copyOptions)
+        .then(function() {
+            // recursive-copy's dot filter silently drops dot-prefixed names (e.g. a
+            // sanitized upload '..2f..') and the resolved results can overcount what was
+            // actually placed ("Copied 5 files", 4 placed). Never report the library's
+            // number: walk the source, keep only allow-listed entries, and count solely
+            // the files that really arrived in dest. Each requested-but-not-placed entry is
+            // WARNed by name via the existing console.error channel. The allow-list itself
+            // is unchanged: unsafe dot-prefixed names are still skipped, partial success
+            // is still 200.
+            const requested = [];
+            const walk = (dir, prefix) => {
+                for(const entry of fs.readdirSync(dir, {withFileTypes: true})) {
+                    if(entry.isDirectory()) walk(dir + '/' + entry.name, prefix + entry.name + '/');
+                    else requested.push(prefix + entry.name);
+                }
+            };
+            walk(srcDir, '');
+            let copied = 0;
+            requested
+            .filter(rel => !allow || allow.has(rel.split(/[\\/]/)[0]))
+            .forEach(rel => {
+                if(fs.existsSync(destDir + '/' + rel)) copied++;
+                else console.error('copy-docs: WARN entry not copied (silently skipped, e.g. dot-prefixed unsafe name): ' + rel);
+            });
+            return new ApiResponse(200, 'Copied ' + copied + ' files');
         })
         .catch(function(error) {
             // 400 (not 500): the session-manager create-project flow only tolerates
