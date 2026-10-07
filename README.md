@@ -1,7 +1,8 @@
 # container-agent
 
-A Node.js CLI tool that runs inside short-lived `visp-operations-session` containers to perform
-filesystem, EMU-DB, and Git operations on behalf of the VISP platform.
+A Node.js CLI tool that runs inside short-lived operations containers (image
+`visp-jupyter-session`) to perform filesystem, EMU-DB, and Git operations on behalf of the
+VISP platform.
 
 ## What it does
 
@@ -33,7 +34,9 @@ process calls to set up and maintain EMU speech databases:
 | `emudb-scan` | Scan and report DB contents |
 | `emudb-read-dbconfig` | Return the DB config as JSON |
 
-**Git operations** — manages the per-project Git repository (backed by GitLab):
+**Git operations** — manages the per-project Git repositories on the deployment's repositories volume. Historically their
+remote was a GitLab instance (and an early EMU-webApp save path spoke GitLab's API); both integrations have since been
+removed, so "GitLab" is history here, not a running dependency — emu-webapp-server likewise no longer poses as one:
 
 | Command | Description |
 |---|---|
@@ -42,20 +45,28 @@ process calls to set up and maintain EMU speech databases:
 | `add` | Stage all changes |
 | `commit` | Commit staged changes |
 | `push` | Push to remote |
-| `reset` | Hard-reset to HEAD |
+| `reset` | Soft-reset one commit back (`HEAD^`, changes stay staged) |
 | `status` | Print working-tree status |
-| `checkout` | Switch branch |
-| `save` | Shorthand: chown → pull → add → commit → push |
+| `checkout` | Create a fresh `system-branch-<timestamp>` local branch (used only to recover from push conflicts — it does not switch to a given branch) |
+| `save` | Shorthand: pull → add → commit → push (the former chown step was removed: chowning under `--userns=keep-id` corrupts shared ownership) |
 
 **Filesystem utilities:**
 
 | Command | Description |
 |---|---|
-| `copy-docs` | Copy uploaded documents into the project |
+| `copy-docs` | Copy uploaded documents into the project (see copy-docs semantics below) |
 | `copy-project-template-directory` | Seed a new project from the template |
 | `full-recursive-copy <src> <dest>` | General-purpose recursive copy |
-| `chown-directory <path> <owner>` | Change directory ownership |
 | `delete-sessions` | Remove bundle directories for specified sessions |
+
+### copy-docs semantics
+
+With `DOC_FILES` set (a **plain JSON** allow-list — not base64), only allow-listed documents
+are considered; within that list, only documents **this save actually carries** (present in
+the upload directory) replace same-named files in the project. An allow-listed document
+missing from the upload directory is a WARN, not an error — unless it must nevertheless be
+kept and cannot be delivered, in which case the save fails with `code: 500` in the JSON
+response, which session-manager honors by aborting before deleting the uploads.
 
 ## Environment variables
 
@@ -63,26 +74,43 @@ All configuration is passed via environment variables set by session-manager whe
 the container:
 
 | Variable | Used by |
-|---|---|
+|:---|:---|
 | `PROJECT_PATH` | All commands — path to the project inside the container |
 | `GIT_REPOSITORY_URL` | `clone` — remote URL |
-| `GIT_BRANCH` | `push` / `checkout` — branch name (default: `master`) |
+| `GIT_BRANCH` | `push` only — overrides the built-in `master` default (never read by `checkout`) |
 | `GIT_USER_NAME` | Git identity |
 | `GIT_USER_EMAIL` | Git identity |
-| `EMUDB_SESSIONS` | EMU-DB commands — base64-encoded JSON session list |
-| `ANNOT_LEVELS` | `emudb-create-annotlevel` — base64-encoded JSON level definitions |
-| `BUNDLE_LISTS` | `emudb-create-bundlelist` — base64-encoded JSON bundle lists |
-| `UPLOAD_PATH` | Session import — path to uploaded audio |
+| `EMUDB_SESSIONS` | `emudb-create-sessions` and `delete-sessions` — base64-encoded JSON session list |
+| `ANNOT_LEVEL_DEF_NAME` (+ `_TYPE`, read by create only) | `emudb-create-annotlevel` and `emudb-remove-annotlevel` — single level definition |
+| `ANNOT_LEVEL_LINK_SUPER` / `_SUB` (+ `_DEF_TYPE`, read by create only) | `emudb-create-annotlevellink` and `emudb-remove-annotlevellink` — single link definition |
+| `ANNOT_LEVELS` | `emudb-setlevelcanvasesorder` — base64-encoded JSON level order |
+| `BUNDLE_LIST_NAME` | `emudb-create-bundlelist` — single bundle list name |
+| `BUNDLE_LISTS` | `emudb-update-bundle-lists` — base64-encoded JSON bundle lists |
+| `DOC_FILES` | `copy-docs` — **plain JSON** document allow-list |
+| `WRITE_META_JSON` | `emudb-create-sessions` — toggles meta.json rewrite |
+| `UPLOAD_PATH` | Session import — path to uploaded audio; `UPLOAD_PATH/docs` is the copy-docs source |
+| `CONTAINER_AGENT_TEST` | Development only — when `true`, reads a local `.env` via dotenv and points the R scripts and uploads at `src/scripts/` and `./uploads` instead of the in-container paths (`/container-agent/scripts`, the real `UPLOAD_PATH`); used by the local `simulate` command and the unit tests. Never set it in the deployment |
 
-Set `GIT_SSL_NO_VERIFY=true` if the GitLab instance uses a self-signed certificate.
+Set `GIT_SSL_NO_VERIFY=true` if the git remote uses a self-signed certificate.
 
 ## How it is used in visible-speech-deployment
 
-container-agent is built with webpack into a single bundle and injected into the
-`visp-operations-session` container, where session-manager invokes it via the Podman exec API.
+container-agent is built with webpack into a single bundle (`dist/main.js`, plus the R
+`scripts/` and `tools/` they invoke) and injected into operations containers — the
+`visp-jupyter-session` image bakes it in for prod, and dev bind-mounts `dist/` — where
+session-manager invokes it via the Podman exec API.
 It is managed as part of the
 [humlab-speech/visible-speech-deployment](https://github.com/humlab-speech/visible-speech-deployment)
 repository — see the deployment repo's `AGENTS.md` for build and deployment details.
+
+## Response contract
+
+Commands answer as a `{ "code": <n>, "body": ... }` JSON object on **stdout**, and the
+process normally exits 0 regardless of the code — callers (session-manager) parse the JSON,
+never the exit status. Exceptions to know: missing git env vars or a missing command
+argument throw synchronously (non-zero exit, no JSON); a few commands print the raw error
+object instead of a JSON envelope on failure; and an unexpected push/commit error can crash
+the process without a JSON answer (known code gap — do not build retry logic on exit status).
 
 ## Development
 
@@ -90,7 +118,9 @@ repository — see the deployment repo's `AGENTS.md` for build and deployment de
 # Build the webpack bundle
 npm run build
 
+# Unit tests (copy-docs semantics)
+npm test
+
 # Simulate a full project-creation sequence locally (reads .env)
 CONTAINER_AGENT_TEST=true node src/main.mjs simulate
 ```
-

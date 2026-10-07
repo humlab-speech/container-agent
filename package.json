@@ -1,10 +1,10 @@
 {
-  "name": "git-agent",
+  "name": "container-agent",
   "version": "1.1.0",
   "description": "",
   "main": "src/main.mjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test test/*.test.mjs",
     "build": "webpack --mode=production ./src/main.mjs",
     "start": "node dist/main.js",
     "build-and-run": ". ./.env && npm run build && podman run -it --rm -v $(pwd)/dist:/container-agent -v $VISP_BASE_PATH/mounts/repositories:/repositories -v $VISP_BASE_PATH/mounts/repositories/$VISP_PROJECT:/home/jovyan/project visp-jupyter-session:latest bash"
@@ -13,7 +13,6 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^10.0.0",
-    "esm": "^3.2.25",
     "nanoid": "^4.0.0",
     "recursive-copy": "^2.0.11",
     "simple-git": "^3.33.0"

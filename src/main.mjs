@@ -5,7 +5,6 @@ import GitRepository from "./GitRepository.class.mjs";
 import EmuDbManager from "./EmuDbManager.class.mjs";
 import dotenv from "dotenv";
 import fs from "fs";
-import { exec } from "child_process";
 
 
 /**
@@ -19,6 +18,18 @@ import { exec } from "child_process";
  * PROJECT_PATH
  * 
 **/
+
+// Whether a name from DOC_FILES can be joined onto a directory and asked about
+// without the question itself being the vulnerability. Mirrors what api.php's
+// uploadFileName() allows through (no separator, no NUL, not dot-prefixed).
+function isPlainFileName(name) {
+    return (
+        typeof name === "string" &&
+        name.length > 0 &&
+        !name.startsWith(".") &&
+        !/[\\/\0]/.test(name)
+    );
+}
 
 export default class ContainerAgent {
     constructor() {
@@ -79,9 +90,6 @@ export default class ContainerAgent {
                     break;
                 case "copy-docs":
                     this.copyDocs().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
-                    break;
-                case "chown-directory":
-                    this.chownDirectory(args[0], args[1]).then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
                     break;
                 case "copy-project-template-directory":
                     this.copyProjectTemplateDirectory().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
@@ -215,24 +223,133 @@ export default class ContainerAgent {
         if(!fs.existsSync(srcDir)) {
             return Promise.resolve(new ApiResponse(200, 'No documents to copy'));
         }
-        // A re-upload replaces the document; the previous version stays in the project's git history
-        return copy(srcDir, process.env.PROJECT_PATH + '/Documents', { overwrite: true })
-        .then(function(results) {
-            return new ApiResponse(200, 'Copied ' + results.length + ' files');
+        // No overwrite option: with overwrite:true recursive-copy rimrafs any existing
+        // dest entry when a source file collides with a same-named dest directory,
+        // silently deleting whole folders from the user's git-tracked repo. Same-name
+        // re-uploads are already collapsed into one file by the PHP upload handler.
+        // DOC_FILES (optional): authoritative list of documents the user actually kept in
+        // the form. The upload dir can also contain orphans - files removed in the UI are
+        // never deleted server-side - so when the list is given, copy only those files.
+        const destDir = process.env.PROJECT_PATH + '/Documents';
+        let copyOptions = { junk: true }; // only exclusion left is 'dot-prefixed', so 'may be replaced' below can mirror 'will be placed'
+        let allow = null;
+        // One rule for "this save carries this entry": match the allow-list against the
+        // first path segment of whatever relative path is being considered. rel is a
+        // recursive-copy relPath, a walk() prefix+name, or a bare readdirSync name
+        // (for which the split is a no-op). No allow-list means everything is carried.
+        const carried = (rel) => !allow || allow.has(rel.split(/[\\/]/)[0]);
+        if(process.env.DOC_FILES) {
+            try {
+                allow = new Set(JSON.parse(process.env.DOC_FILES).map(f => (f && f.name) ? f.name : f));
+            } catch(error) {
+                // Fail the copy instead of falling back to copying everything - that fallback
+                // is exactly the leak above. Answer 500, not 400: 400 was swallowed as 'no documents'.
+                console.error('copy-docs: unparseable DOC_FILES: ' + error);
+                return Promise.resolve(new ApiResponse(500, 'Invalid DOC_FILES: ' + error));
+            }
+            copyOptions.filter = function(relPath) {
+                return carried(relPath);
+            };
+        }
+        // A same-name re-upload must replace the committed document: without overwrite:true
+        // recursive-copy dies with EEXIST on an existing dest file, so every update would
+        // fail and silently keep the old version. Delete the stale dest FILE first - and take
+        // the names from the SOURCE LISTING, never from DOC_FILES: an allow-list entry is
+        // client-supplied and may name a committed document this save does not carry, and
+        // unlinking that one deletes a colleague's committed file while the copy still
+        // answers 200 (the count below walks src, so it never notices). Replacing regular,
+        // non-dot-prefixed source files is exactly the set copy() will place.
+        // ponytail: a copy that fails after the replace loses that one committed file (the
+        // uploads dir survives, so it is recoverable by retry); copy-to-temp + renameSync in
+        // the same directory is the upgrade if that ever bites.
+        let uploaded = [];
+        try {
+            uploaded = fs.readdirSync(srcDir, { withFileTypes: true })
+                .filter(entry => entry.isFile() && !entry.name.startsWith('.'))
+                .map(entry => entry.name);
+        } catch(error) {
+            console.error('copy-docs: cannot list ' + srcDir + ', no committed file will be replaced: ' + error);
+        }
+        if(allow) {
+            const names = new Set(uploaded);
+            allow.forEach(name => { if(!names.has(name)) console.error('copy-docs: WARN allow-listed document is not in the upload dir (skipped): ' + JSON.stringify(name)); });
+        }
+        const replace = uploaded.filter(name => carried(name));
+        replace.forEach(name => {
+            try {
+                // rmSync with force ignores ENOENT like the old unlinkSync catch did, and
+                // on a directory it throws ERR_FS_EISDIR without recursing - the committed
+                // directory survives to collide with recursive-copy, exactly as before.
+                fs.rmSync(destDir + '/' + name, { force: true });
+            } catch(error) {
+                if(error.code != 'EISDIR' && error.code != 'ERR_FS_EISDIR') {
+                    console.error('copy-docs: could not replace ' + name + ': ' + error);
+                }
+            }
+        });
+        return copy(srcDir, destDir, copyOptions)
+        .then(function() {
+            // recursive-copy's dot filter silently drops dot-prefixed names (e.g. a
+            // sanitized upload '..2f..') and the resolved results can overcount what was
+            // actually placed ("Copied 5 files", 4 placed). Never report the library's
+            // number: walk the source, keep only allow-listed entries, and count solely
+            // the files that really arrived in dest. Each requested-but-not-placed entry is
+            // WARNed by name via the existing console.error channel. The allow-list itself
+            // is unchanged: unsafe dot-prefixed names are still skipped. What is NOT
+            // partial anymore is the answer: any allow-listed document that ended up
+            // nowhere refuses the save below, so "200" always means every document the
+            // form kept is in Documents/ (or was already there from an earlier save).
+            const requested = [];
+            const walk = (dir, prefix) => {
+                for(const entry of fs.readdirSync(dir, {withFileTypes: true})) {
+                    if(entry.isDirectory()) walk(dir + '/' + entry.name, prefix + entry.name + '/');
+                    else requested.push(prefix + entry.name);
+                }
+            };
+            walk(srcDir, '');
+            let copied = 0;
+            requested
+            .filter(rel => carried(rel))
+            .forEach(rel => {
+                if(fs.existsSync(destDir + '/' + rel)) copied++;
+                else console.error('copy-docs: WARN entry not copied (silently skipped, e.g. dot-prefixed unsafe name): ' + rel);
+            });
+            // An allow-list is a promise, not a hint: every document the form kept must
+            // end up in Documents/. Answering 200 while one of them arrived nowhere let the
+            // caller commit and then delete the only remaining copy (it removes the upload
+            // directory on success), which is how a document disappears without a trace. A
+            // name already in Documents - unchanged since an earlier save - is satisfied and
+            // asks for nothing.
+            const missing = allow
+                ? [...allow].filter(
+                      (name) =>
+                          // A name that is not a plain file name can never have been
+                          // placed by the copy above (the filter matches basenames), so
+                          // probing for it would be pointless twice over: it is also an
+                          // existsSync() of a path the client chose - "/x", "../x" -
+                          // against the container's filesystem, and finding something
+                          // there would report a traversal as a delivered document.
+                          // Such a name is therefore never satisfied: the save is
+                          // refused and names it.
+                          !isPlainFileName(name) ||
+                          !fs.existsSync(destDir + "/" + name),
+                  )
+                : [];
+            if (missing.length) {
+                console.error('copy-docs: refused, these documents did not reach ' + destDir + ': ' + missing.join(', '));
+                return new ApiResponse(500, 'Documents were not stored: ' + missing.join(', ') + '. Rename them (the name may be unsafe) and save again.');
+            }
+            return new ApiResponse(200, 'Copied ' + copied + ' files');
         })
         .catch(function(error) {
+            // 500 (not 400): a real copy failure must ABORT the save, so the flow stops
+            // before the uploads directory is cleaned up and nothing is lost silently.
+            console.error('copy-docs failed: ' + error);
             return new ApiResponse(500, 'Copy failed: ' + error);
         });
     }
     
-    async chownDirectory(directory, toUser = "root") {
-        return new Promise((resolve, reject) => {
-            exec("chown -R "+toUser+" "+directory, (error, stdout, stderr) => {
-                resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
-            });
-        });
-    }
-    
+
     async fullRecursiveCopy(src, dest) {
         let options = {
             dot: true //Also copy hidden files
@@ -250,7 +367,22 @@ export default class ContainerAgent {
     async deleteSessions() {
         //we want to delete all the bundles in this session without deleting the session itself and the metadata file
         let sessions = Buffer.from(process.env.EMUDB_SESSIONS, 'base64').toString('utf8');
-        JSON.parse(sessions).forEach(session => {
+        const sessionList = JSON.parse(sessions);
+        // Each name becomes a path segment under Data/VISP_emuDB and a recursive
+        // rmdir target: it must be a plain segment. Spaces are legal (the dialog
+        // allows them); separators, traversal and dot-names are not.
+        for (const s of sessionList) {
+            if (
+                typeof s?.name !== "string" ||
+                s.name === "" ||
+                s.name.startsWith(".") ||
+                s.name.includes("..") ||
+                /[\/\x00]/.test(s.name)
+            ) {
+                return new ApiResponse(400, "delete-sessions refused: session name is not a safe path segment");
+            }
+        }
+        sessionList.forEach(session => {
             //scan the directory
             let bundleNames = fs.readdirSync(process.env.PROJECT_PATH+"/Data/VISP_emuDB/"+session.name+"_ses");
             //filter out the metadata file
