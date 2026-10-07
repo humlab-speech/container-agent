@@ -57,7 +57,6 @@ removed, so "GitLab" is history here, not a running dependency — emu-webapp-se
 | `copy-docs` | Copy uploaded documents into the project (see copy-docs semantics below) |
 | `copy-project-template-directory` | Seed a new project from the template |
 | `full-recursive-copy <src> <dest>` | General-purpose recursive copy |
-| `chown-directory <path> <owner>` | ⚠️ Legacy, no caller: chowning breaks ownership under keep-id. Do not use |
 | `delete-sessions` | Remove bundle directories for specified sessions |
 
 ### copy-docs semantics
