@@ -57,58 +57,6 @@ test("getBundlesR: same vector, second helper instance", () => {
     });
 });
 
-test("delete-sessions: a session name that traverses cannot delete outside the EMU-DB", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "ca-del-" ));
-    const emuDir = path.join(root, "Data", "VISP_emuDB");
-    const victim = path.join(emuDir, "..", "victim_ses", "take_bndl");
-    fs.mkdirSync(victim, { recursive: true });
-    const env = {
-        ...TEST_ENV,
-        PROJECT_PATH: root,
-        EMUDB_SESSIONS: Buffer.from(
-            JSON.stringify([{ name: "../victim" }]),
-        ).toString("base64"),
-    };
-    const r = spawnSync(process.execPath, [MAIN, "delete-sessions"], {
-        encoding: "utf8",
-        timeout: 30000,
-        env,
-    });
-    assert.ok(
-        fs.existsSync(victim),
-        "traversal name removed a directory outside the session tree (exit=" +
-            r.status +
-            ", out=" +
-            (r.stdout || "").trim() +
-            ")",
-    );
-    assert.match(r.stdout || r.stderr || "", /"code":400|refused/i);
-    fs.rmSync(root, { recursive: true, force: true });
-});
-
-test("delete-sessions: a legitimate space-bearing name still deletes inside the EMU-DB", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "ca-del-ok-" ));
-    const sesDir = path.join(root, "Data", "VISP_emuDB", "Session 1_ses");
-    fs.mkdirSync(path.join(sesDir, "take_bndl"), { recursive: true });
-    fs.writeFileSync(path.join(sesDir, "Session 1.json"), "{}");
-    const env = {
-        ...TEST_ENV,
-        PROJECT_PATH: root,
-        EMUDB_SESSIONS: Buffer.from(
-            JSON.stringify([{ name: "Session 1" }]),
-        ).toString("base64"),
-    };
-    const r = spawnSync(process.execPath, [MAIN, "delete-sessions"], {
-        encoding: "utf8",
-        timeout: 30000,
-        env,
-    });
-    assert.ok(!fs.existsSync(path.join(sesDir, "take_bndl")), "legit bundles must delete");
-    assert.ok(fs.existsSync(path.join(sesDir, "Session 1.json")), "metadata file is kept");
-    assert.match(r.stdout || "", /"code":200/);
-    fs.rmSync(root, { recursive: true, force: true });
-});
-
 test("chown-directory is gone: it cannot execute anything, smuggled or not", () => {
     withoutMarker(() => {
         spawnSync(

@@ -100,9 +100,6 @@ export default class ContainerAgent {
                 case "emudb-read-dbconfig":
                     emudbMan.getEmuDbConfigAsApiResponse(process.env.PROJECT_PATH).then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
                     break;
-                case "delete-sessions":
-                    this.deleteSessions().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar));
-                    break;
                 case "emudb-create":
                     emudbMan.create().then(ar => console.log(ar.toJSON())).catch(ar => console.log(ar.toJSON()));
                     break;
@@ -364,39 +361,6 @@ export default class ContainerAgent {
         });
     }
 
-    async deleteSessions() {
-        //we want to delete all the bundles in this session without deleting the session itself and the metadata file
-        let sessions = Buffer.from(process.env.EMUDB_SESSIONS, 'base64').toString('utf8');
-        const sessionList = JSON.parse(sessions);
-        // Each name becomes a path segment under Data/VISP_emuDB and a recursive
-        // rmdir target: it must be a plain segment. Spaces are legal (the dialog
-        // allows them); separators, traversal and dot-names are not.
-        for (const s of sessionList) {
-            if (
-                typeof s?.name !== "string" ||
-                s.name === "" ||
-                s.name.startsWith(".") ||
-                s.name.includes("..") ||
-                /[\/\x00]/.test(s.name)
-            ) {
-                return new ApiResponse(400, "delete-sessions refused: session name is not a safe path segment");
-            }
-        }
-        sessionList.forEach(session => {
-            //scan the directory
-            let bundleNames = fs.readdirSync(process.env.PROJECT_PATH+"/Data/VISP_emuDB/"+session.name+"_ses");
-            //filter out the metadata file
-            bundleNames = bundleNames.filter(bundleName => bundleName != session.name+".json");
-            //delete the bundles
-            bundleNames.forEach(bundleName => {
-                let path = process.env.PROJECT_PATH+"/Data/VISP_emuDB/"+session.name+"_ses/"+bundleName;
-                fs.rmdirSync(path, { recursive: true });
-            });
-        });
-
-        return new ApiResponse(200, "Deleted sessions");
-    }
-    
     async copyProjectTemplateDirectory() {
         let options = {
             dot: true //Also copy hidden files
