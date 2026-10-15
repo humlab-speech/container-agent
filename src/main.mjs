@@ -207,6 +207,16 @@ export default class ContainerAgent {
                     })
 
                     break;
+                default:
+                    // No arm matched. Falling through here used to exit 0 with empty
+                    // stdout, session-manager parsed that as { error: "" }, ApiServer
+                    // logged "assuming success" and marked the step done — so an old
+                    // caller against a new image reported a deleted/destructive step
+                    // (e.g. the removed delete-sessions) as completed while it did
+                    // nothing. Answer with the 400 envelope and a non-zero exit code.
+                    console.log(new ApiResponse(400, 'Unknown command: ' + cmd).toJSON());
+                    process.exitCode = 1;
+                    break;
             }
         }
     }

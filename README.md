@@ -57,7 +57,6 @@ removed, so "GitLab" is history here, not a running dependency — emu-webapp-se
 | `copy-docs` | Copy uploaded documents into the project (see copy-docs semantics below) |
 | `copy-project-template-directory` | Seed a new project from the template |
 | `full-recursive-copy <src> <dest>` | General-purpose recursive copy |
-| `delete-sessions` | Remove bundle directories for specified sessions |
 
 ### copy-docs semantics
 
@@ -80,7 +79,7 @@ the container:
 | `GIT_BRANCH` | `push` only — overrides the built-in `master` default (never read by `checkout`) |
 | `GIT_USER_NAME` | Git identity |
 | `GIT_USER_EMAIL` | Git identity |
-| `EMUDB_SESSIONS` | `emudb-create-sessions` and `delete-sessions` — base64-encoded JSON session list |
+| `EMUDB_SESSIONS` | `emudb-create-sessions` — base64-encoded JSON session list |
 | `ANNOT_LEVEL_DEF_NAME` (+ `_TYPE`, read by create only) | `emudb-create-annotlevel` and `emudb-remove-annotlevel` — single level definition |
 | `ANNOT_LEVEL_LINK_SUPER` / `_SUB` (+ `_DEF_TYPE`, read by create only) | `emudb-create-annotlevellink` and `emudb-remove-annotlevellink` — single link definition |
 | `ANNOT_LEVELS` | `emudb-setlevelcanvasesorder` — base64-encoded JSON level order |
@@ -108,9 +107,11 @@ repository — see the deployment repo's `AGENTS.md` for build and deployment de
 Commands answer as a `{ "code": <n>, "body": ... }` JSON object on **stdout**, and the
 process normally exits 0 regardless of the code — callers (session-manager) parse the JSON,
 never the exit status. Exceptions to know: missing git env vars or a missing command
-argument throw synchronously (non-zero exit, no JSON); a few commands print the raw error
-object instead of a JSON envelope on failure; and an unexpected push/commit error can crash
-the process without a JSON answer (known code gap — do not build retry logic on exit status).
+argument throw synchronously (non-zero exit, no JSON); an unknown command answers the
+`400 / "Unknown command: <cmd>"` envelope and exits non-zero (never a silent success);
+a few commands print the raw error object instead of a JSON envelope on failure; and an
+unexpected push/commit error can crash the process without a JSON answer (known code gap
+— do not build retry logic on exit status).
 
 ## Development
 
