@@ -1,4 +1,3 @@
-import { exec } from "child_process";
 import simpleGit from "simple-git";
 import ApiResponse from "./ApiResponse.class.mjs";
 
@@ -35,11 +34,12 @@ export default class GitRepository {
         return this.git.clone(process.env.GIT_REPOSITORY_URL, this.repoPath, options)
         .then(async t => {
             if(sparse) {
-                await new Promise((resolve, reject) => {
-                    exec("cd "+this.repoPath+" && git sparse-checkout init && git sparse-checkout set Data/VISP_emuDB/VISP_DBconfig.json", (error, stdout, stderr) => {
-                        resolve();
-                    });
-                });
+                // argv-only through simple-git: the repoPath must never be
+                // re-interpreted by a shell the way `cd X && git ...` did.
+                await this.git.cwd(this.repoPath).raw(["sparse-checkout", "init"]);
+                await this.git
+                    .cwd(this.repoPath)
+                    .raw(["sparse-checkout", "set", "Data/VISP_emuDB/VISP_DBconfig.json"]);
             }
             
             return new ApiResponse(200, 'ok');

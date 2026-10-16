@@ -1,4 +1,4 @@
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import fs from 'fs';
 import { nanoid } from "nanoid";
 import ApiResponse from './ApiResponse.class.mjs';
@@ -31,7 +31,7 @@ export default class EmuDbManager {
             process.env['EMUDB_SESSIONS'] = Buffer.from(JSON.stringify(sessions), 'utf8').toString("base64");
             */
 
-            exec("R -s -f "+this.scriptPath+"/createEmuDb.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/createEmuDb.R"], (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -39,7 +39,7 @@ export default class EmuDbManager {
 
     async createSessions() {
         return new Promise((resolve, reject) => {
-            exec("R -s -f "+this.scriptPath+"/createSessions.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/createSessions.R"], (error, stdout, stderr) => {
                 if(error != null && error.code != 0) {
                     resolve(new ApiResponse(500, { stdout: stdout, stderr: stderr, error: error }));
                 }
@@ -99,7 +99,7 @@ export default class EmuDbManager {
 
     async createBundleList() {
         return new Promise((resolve, reject) => {
-            exec("R -s -f "+this.scriptPath+"/createBundleList.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/createBundleList.R"], (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -111,6 +111,13 @@ export default class EmuDbManager {
         let projectPath = process.env.PROJECT_PATH;
 
         let path = projectPath+"/Data/VISP_emuDB/bundleLists";
+        //BUNDLE_LISTS originates from client-supplied websocket data (session-manager
+        //forwards msg.data verbatim), so validate the one field that becomes a path.
+        for(let user of bundleLists) {
+            if(!user || typeof user.username != "string" || /[/\\\0]/.test(user.username) || user.username.includes("..")) {
+                return Promise.resolve(new ApiResponse(400, 'Invalid username in bundle list'));
+            }
+        }
         //check that the 'bundleLists' directory exists first - which may not always be the case
         await this.mkdir(path);
 
@@ -148,7 +155,7 @@ export default class EmuDbManager {
 
     async createAnnotationLevel() {
         return new Promise((resolve, reject) => {
-            exec("R -s -f "+this.scriptPath+"/addAnnotationLevelDefinition.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/addAnnotationLevelDefinition.R"], (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -156,7 +163,7 @@ export default class EmuDbManager {
 
     async removeAnnotationLevel() {
         return new Promise((resolve, reject) => {
-            exec("R -s -f "+this.scriptPath+"/removeAnnotationLevelDefinition.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/removeAnnotationLevelDefinition.R"], (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -164,7 +171,7 @@ export default class EmuDbManager {
 
     async createAnnotationLevelLink() {
         return new Promise((resolve, reject) => {
-            exec("R -s -f "+this.scriptPath+"/addAnnotationLevelLinkDefinition.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/addAnnotationLevelLinkDefinition.R"], (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -172,7 +179,7 @@ export default class EmuDbManager {
 
     async removeAnnotationLevelLink() {
         return new Promise((resolve, reject) => {
-            exec("R -s -f "+this.scriptPath+"/removeAnnotationLevelLinkDefinition.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/removeAnnotationLevelLinkDefinition.R"], (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -180,7 +187,7 @@ export default class EmuDbManager {
 
     async addDefaultPerspectives() {
         return new Promise((resolve, reject) => {
-            exec("R -s -f "+this.scriptPath+"/addDefaultPerspectives.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/addDefaultPerspectives.R"], (error, stdout, stderr) => {
                 //Edit the VISP_DBconfig.json to add perspective => signalCanvases spec
                 const PROJECT_PATH = process.env.PROJECT_PATH ? process.env.PROJECT_PATH : "/home/jovyan/project";
                 this.getEmuDbConfig(PROJECT_PATH).then(dbConfig => {
@@ -236,7 +243,7 @@ export default class EmuDbManager {
 
     async addTrackDefinitions() {
         return new Promise((resolve, reject) => {
-            exec("R -s -f "+this.scriptPath+"/addTrackDefinitions.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/addTrackDefinitions.R"], (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -244,7 +251,7 @@ export default class EmuDbManager {
 
     async addSsffTrackDefinitions() {
         return new Promise((resolve, reject) => {
-            exec("R -s -f "+this.scriptPath+"/addSsffTrackDefinitions.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/addSsffTrackDefinitions.R"], (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -252,7 +259,7 @@ export default class EmuDbManager {
 
     async setSignalCanvasesOrder( ){
         return new Promise((resolve, reject) => {
-            exec("R -s -f "+this.scriptPath+"/setSignalCanvasesOrder.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/setSignalCanvasesOrder.R"], (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -260,7 +267,7 @@ export default class EmuDbManager {
 
     async setLevelCanvasesOrder( ){
         return new Promise((resolve, reject) => {
-            exec("R -s -f "+this.scriptPath+"/setLevelCanvasesOrder.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/setLevelCanvasesOrder.R"], (error, stdout, stderr) => {
                 resolve(new ApiResponse(200, { stdout: stdout, stderr: stderr, error: error} ));
             });
         });
@@ -406,7 +413,7 @@ export default class EmuDbManager {
 
     async getSessionsR(projectPath = "./") {
         return new Promise((resolve, reject) => {
-            exec("PROJECT_PATH="+projectPath+" R -s -f "+this.scriptPath+"/getSessions.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/getSessions.R"], { env: { ...process.env, PROJECT_PATH: projectPath } }, (error, stdout, stderr) => {
                 stdout = stdout.trim();
                 let outputLines = stdout.split("\n");
                 let jsonData = outputLines.slice(-1)[0]; //Last row is where we expect the relevant output to be
@@ -418,7 +425,7 @@ export default class EmuDbManager {
 
     async getBundlesR(projectPath = "./") {
         return new Promise((resolve, reject) => {
-            exec("PROJECT_PATH="+projectPath+" R -s -f "+this.scriptPath+"/getBundles.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/getBundles.R"], { env: { ...process.env, PROJECT_PATH: projectPath } }, (error, stdout, stderr) => {
                 stdout = stdout.trim();
                 let outputLines = stdout.split("\n");
                 let jsonData = outputLines.slice(-1)[0]; //Last row is where we expect the relevant output to be
@@ -442,7 +449,7 @@ export default class EmuDbManager {
     //This might be redundant since this information seems to exist in the *_DBconfig.json
     async getAnnotLevels(projectPath = "./") {
         return new Promise((resolve, reject) => {
-            exec("PROJECT_PATH="+projectPath+" R -s -f "+this.scriptPath+"/getAnnotLevels.R", (error, stdout, stderr) => {
+            execFile("R", ["-s", "-f", this.scriptPath + "/getAnnotLevels.R"], { env: { ...process.env, PROJECT_PATH: projectPath } }, (error, stdout, stderr) => {
                 stdout = stdout.trim();
                 let outputLines = stdout.split("\n");
                 let jsonData = outputLines.slice(-1)[0]; //Last row is where we expect the relevant output to be
