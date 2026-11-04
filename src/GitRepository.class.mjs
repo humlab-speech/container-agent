@@ -1,9 +1,9 @@
-import simpleGit from "simple-git";
+import { simpleGit } from "simple-git";
 import ApiResponse from "./ApiResponse.class.mjs";
 
 export default class GitRepository {
     constructor(repoPath, gitUserName, gitUserEmail) {
-        this.git = new simpleGit();
+        this.git = simpleGit();
         this.repoPath = repoPath;
         this.gitUserName = gitUserName;
         this.gitUserEmail = gitUserEmail;
